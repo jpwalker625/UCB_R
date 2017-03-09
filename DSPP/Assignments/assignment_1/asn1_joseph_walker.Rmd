@@ -1,0 +1,72 @@
+---
+title: "Programming Assignment 1"
+author: "Joseph Walker"
+date: "February 10, 2017"
+output: html_document
+---
+ 
+## Programming Assignment 1
+
+Use the tab-delimited gem data set ddset.tsv posted in the Files section under Assignment 1 to do the
+following:
+
+* Write an RMarkdown file and use it to generate a knitted HTML file that includes a bar plot of
+the count of observations in the data set showing price ranking by cut, where price ranking is
+defined as price:
+    + up to the 15th percentile: Lowest
+    + 16th to the 30th percentile: Moderate
+    + 31st to the 75th percentile: Higher
+    + above 75th percentile: Expensive
+
+### Hand in three files:
+1. Your RMarkdown file: asn1_firstname_lastname.Rmd
+2. Knitted HTML with source: asn1_firstname_lastname_with_source.html (with source code, i.e.
+chunk option echo = TRUE)
+3. Knitted HTML with no source: asn1_firstname_lastname.html (with source code, i.e. chunk
+option echo = FALSE)
+
+### Mandatory Specifications
+1. Assume ddset.tsv is on the same directory as your .Rmd file. Your HTML file results should be
+100% reproducible: I should be able to Knit it to HTML without modification
+2. Include in your results the complete problem description text for Programming Assignment 1
+above
+3. In the YAML section of your .Rmd file, include title "Programming Assignment 1," author
+(your name), and date. Of course, output should be HTML
+4. Use base R and ggplot2 only in your solution. Use no other packages except ggplot2 (do not
+use dplyr!)
+5. Follow the style guidelines described by Hadley Wickham in this R style guide
+6. Include a short (no more than one paragraph) description of your approach to solving the
+problem at the end of your HTML document
+
+
+```{r Import & Transform, echo=TRUE, message=FALSE, warning=FALSE}
+diamonds <- read.csv(file = "ddset.tsv", header = TRUE, sep = "\t" )
+
+quants <- quantile(diamonds$price, probs = c(.15,.30,.75))
+
+diamonds$price_ranking <- cut(diamonds$price,
+                              breaks = c(0, quants, max(diamonds$price)),
+                              labels = c("Lowest", "Moderate", "Higher", "Expensive"))
+```
+
+```{r Visualize, echo=TRUE, message=FALSE, warning=FALSE}
+library(ggplot2)
+library(pals)
+library(ggthemes)
+
+my_pal <- brewer.pastel1(n = 5)
+
+p <- ggplot(diamonds, aes(price_ranking, fill = cut)) +
+  geom_bar() +
+  scale_fill_manual(values = my_pal) +
+  ggtitle(label = "Diamonds: Price Ranking by Cut") +
+  ggthemes::theme_economist_white()
+
+p
+
+```
+
+1. The first step in this assignment requires importing the data set `ddset.tsv`. I have named the data set `diamonds`.
+2. Next, I use the `quantile` function on the price variable to determine the cut off values for the specified categories we want to create in the next step.
+3. I then use the `cut` function to split the price column into categories or bins based on the price groups we are interested in. I assign these values to a new variable: `price_ranking` into our existing data frame `diamonds`.
+4. Finally, I use ggplot to create a stacked bar chart displaying the count of each diamond cut based on its price_ranking.

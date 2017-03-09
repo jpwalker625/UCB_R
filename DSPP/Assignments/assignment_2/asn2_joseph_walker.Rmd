@@ -1,0 +1,270 @@
+---
+title: "Programming Assignment 2"
+author: "Joseph Walker - jpwalker625@gmail.com"
+date: "March 7, 2017"
+output: 
+  html_document: 
+    toc: yes
+---
+
+```{r Global Options, include = TRUE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+```
+
+```{r Require Packages}
+#Load Required Packages
+library(tidyjson)
+library(jsonlite)
+library(lubridate)
+library(tidyverse)
+library(lubridate)
+library(stringr)
+```
+
+###Problem 1
+
+Read in the Mixpanel Web Analytics json files and tidy them.
+
+* events: *"berkeley_event-export.json"*
+
+```{r events data set}
+events <- "berkeley_event-export.json" %>% gather_array() %>%
+  spread_values(name = jstring("name"),
+                distinct_id = jstring("distinct_id"),
+                time = jstring("time"),
+                sampling_factor = jnumber("sampling_factor"),
+                browser = jstring("properties", "$browser"),
+                browser_version = jnumber("properties", "$browser_version"),
+                city = jstring("properties", "$city"),
+                current_url = jstring("properties", "$current_url"),
+                initial_referrer = jstring("properties", "initial_referrer"),
+                initial_referring_domain = jstring("properties", "$initial_referring_domain"),
+                lib_version = jstring("properties", "$lib_version"),
+                os = jstring("properties", "$os"),
+                referrer = jstring("properties", "$referrer"),
+                referring_domain = jstring("properties", "$referring_domain"),
+                region = jstring("properties", "$region"),
+                screen_height = jnumber("properties", "$screen_height"),
+                screen_width = jnumber("properties", "$screen_width"),
+                artist = jstring("properties", "Artist"),
+                duration = jnumber("properties", "Duration"),
+                genre = jstring("properties", "Genre"),
+                price = jnumber("properties", "Price"),
+                title = jstring("properties", "Title"),
+                page_name = jstring("properties", "Page Name"),
+                Plan = jstring("properties", "Plan"),
+                mp_country_code = jstring("properties", "mp_country_code"),
+                mp_lib = jstring("properties", "mp_lib")) %>%
+                  enter_object("labels") %>%
+                  spread_values(labels = jstring("labels"))
+```
+
+* people: *"berkeley_people-export.txt"*
+(I converted the json file into a text file in order to read it in.)
+```{r people data set}
+people <- "berkeley_people-export.txt" %>% 
+  gather_array() %>% 
+  spread_values(distinct_id = jstring("distinct_id"),
+                time = jnumber("time"),
+                last_seen = jnumber("last_seen"),
+                browser = jstring("properties", "$browser"),
+                browser_version = jnumber("properties", "$browser_version"),
+                city = jstring("properties", "$city"),
+                country_code = jstring("properties", "$country_code"),
+                email = jstring("properties", "$email"),
+                initial_referrer = jstring("properties", "$initial_referrer"),
+                initial_referring_domain = jstring("properties", "$initial_referring_domain"),
+                name = jstring("properties", "$name"),
+                os = jstring("properties", "$os"),
+                region = jstring("properties", "$region"),
+                timezone = jstring("properties", "$timezone"),
+                favorite_genre = jstring("properties", "Favorite Genre"),
+                first_login_date = jstring("properties", "First Login Date"),
+                lifetime_song_play_count = jnumber("properties", "Lifetime Song Play Count"),
+                lifetime_song_purchase_count = jnumber("properties", "Lifetime Song Purchase Count"),
+                Plan = jstring("properties", "Plan")) %>%
+  enter_object('properties') %>% 
+  enter_object("$transactions") %>%
+  gather_array() %>% 
+  spread_values(transactions_amount = jnumber("$amount"),
+                transactions_time = jstring("$time"))
+```
+
+Join the two data sets together on the `distinct_id` variable into a third data set.
+
+```{r join events & people}
+
+events_people <- full_join(events, people, by = "distinct_id")
+```
+
+Clean up the column names of `events_people` with a function that converts a string to snake case.
+
+```{r snake_case function}
+
+fix_column_names <- function(x){
+  s <- gsub("properties\\.\\$", "", x) # remove the 'properties.$' from beginning of colname
+  s <- gsub("\\<properties\\>(.)", "", s) # remove properies(.) jargon where
+  s <- gsub("\\.", "_", s) # replace '.' with '_'
+  s <- gsub("(.)([A-Z][a-z]+)", "\\1_\\2", s) # separate with underscores on capitalization
+  s <- tolower(gsub("([a-z0-9])([A-Z])", "\\1_\\2", s)) # lowercase
+  s <- gsub("__", "_", s) # double underscore to single underscore
+  s <- gsub("^[_, .]", "", s) # delete first char underscore "_" or period "."
+  s <- gsub(' ', '', s) # remove spaces
+}
+
+
+colnames(events_people) <- colnames(events_people) %>% fix_column_names()
+```
+
+Replace NA's for `artist` and `page_name` with 'None' and 'No Page Name', respectively.
+
+```{r replace NAs}
+events_people$artist[is.na(events_people$artist)] <- 'None'
+
+events_people$page_name[is.na(events_people$page_name)] <- "No Page Name"
+```
+
+Plot the number of page views grouped by page_name & artist.
+
+```{r Bar Plot}
+p <- ggplot(events_people, aes(x = page_name, fill = artist)) +
+  geom_bar() + 
+  labs(title = "Number of Page Views Grouped by Page Name & Artist",
+       caption = "Mixpanel Web Analytics",
+       x = "page name",
+       y = "page views")
+  
+p
+```
+
+###Problem 2
+
+Read in the AOL search data and fix the column names with the snake case function.
+```{r aol_data}
+
+aol_data <- read.table("user-ct-test-collection-01.txt", header = TRUE,sep = "\t")
+
+colnames(aol_data) <- colnames(aol_data) %>% fix_column_names()
+```
+
+Sessionize the search records.
+
+* A user session is all events for a given user where there is no more than 30 minutes between events.
+
+Generate the following session statistics:
+
+* anon_id
+* session_sequence_number
+* session_id
+* number_searches
+* session_started_at
+* session_length
+* number_clicks
+* mean_item_rank
+* mean_number_search_terms
+
+```{r sessionise}
+aol_data$query_time <- parse_date_time(aol_data$query_time, "%Y-%m-%d %H:%M:%S")
+aol_data$query <- as.character(aol_data$query)
+aol_data$query_count <- str_count(strsplit(aol_data$query, " "),pattern = "\\S+")
+
+
+df <- aol_data %>%
+  group_by(anon_id) %>%
+  arrange(query_time) %>%
+  mutate(minutes_since_last_event = difftime(time1 = query_time, 
+                                             time2 = lag(query_time),
+                                             units = 'mins'),
+         event_boundary = is.na(minutes_since_last_event) | minutes_since_last_event > 30,
+         session_sequence_number = cumsum(event_boundary),
+         session_id = paste(anon_id, session_sequence_number, sep = "_")) %>%
+  group_by(anon_id, session_sequence_number, session_id,query) %>%
+  summarise(number_searches = n(),
+            session_started_at = first(query_time),
+            session_ended_at = last(query_time),
+            session_length = as.numeric(difftime(last(query_time), 
+                                                        first(query_time),
+                                                        units = "mins")),
+            number_clicks = sum(!is.na(click_url)),
+            mean_item_rank = mean(item_rank),
+            mean_number_search_terms = mean(query_count)) %>%
+  ungroup()
+```
+
+Plot the statistics by session:
+
+1. The distribution of session durations (histogram count)
+
+```{r ggplot 1}
+p1 <- ggplot(df, aes(as.integer(session_length))) +
+  geom_histogram(binwidth = 1,
+                 fill = 'steelblue',
+                 color = 'snow') + 
+  scale_y_log10() +
+  ggtitle(label = 'Distribution of Session Durations') +
+  scale_x_continuous(name = 'Session Duration (in minutes)')
+  
+p1
+```
+
+2. The distribution of the number of clicks per session (histogram count)
+
+```{r ggplot 2}
+
+#filter out the 'number_clicks' high outlier & plot
+p2 <- ggplot(filter(df, number_clicks < max(number_clicks)),
+             aes(number_clicks)) +
+  geom_histogram(binwidth = 1,
+                 fill = 'purple',
+                 color = 'snow') + 
+  scale_y_log10() +
+  ggtitle(label = 'Distribution of the Number of Clicks per Session') +
+  scale_x_continuous(name = 'Number of Clicks') +
+  theme_dark()
+
+p2
+```
+
+Summarise the data to the user level:
+
+```{r summarise visitors}
+users_df <- df %>%
+  group_by(anon_id) %>%
+  summarise(number_of_sessions = n(),
+            avg_session_length = mean(session_length)) %>%
+  ungroup()
+
+```
+
+Plot statistics by user:
+
+3. The distribution of the number of sessions by user (histogram count)
+
+```{r ggplot 3}
+
+p3 <- ggplot(users_df, aes(number_of_sessions)) +
+  geom_histogram(binwidth = 1,
+                 colour = 'darkgreen',
+                 fill = 'snow') + 
+  scale_y_log10() +
+  ggtitle(label = 'Distribution of the Number of Sessions per User') +
+  scale_x_continuous(name = 'Number of Sessions (per user)')
+
+p3
+
+```
+
+4. The distribution of mean session duration by user (histogram count)
+
+```{r ggplot 4}
+
+p4 <- ggplot(users_df, aes(avg_session_length)) +
+  geom_histogram(binwidth = 1,
+                 color = 'snow',
+                 fill = 'red') +
+  scale_y_sqrt() +
+  ggtitle(label = 'Distribution of the Average Session Duration by User') +
+  scale_x_continuous(name = 'Average Session Duration (by user)')
+
+p4
+```
