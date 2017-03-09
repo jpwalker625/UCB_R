@@ -1,0 +1,24 @@
+---
+title: "Lecture_4_Notes"
+author: "Joseph Walker"
+date: "3/1/2017"
+output: html_document
+---
+
+Problem 1:
+Wide or Long Format?
+
+long to wide : spread
+wide to long : gather
+```{r Set 1, echo=TRUE, message=FALSE, warning=FALSE}
+df1 <- data.frame(var = c('c1', 'c1', 'c1', 'c2', 'c2', 'c2', 'c3', 'c3', 'c3', 'c4', 'c4', 'c4'), 
+                   id_no = c(1,2,3,2,1,3,3,1,2,3,2,1), 
+                   val = c(44,55,24,37,61,57,97,58,73,33,31,51))
+library(tidyr)
+#spread
+df2 <- df1 %>% spread(key = var, value = val)
+
+#gather
+df3 <- df2 %>% gather(key = var, val = val, c(c1,c2,c3,c4))
+
+```

@@ -1,0 +1,89 @@
+---
+title: "Lecture 3"
+author: "Joseph Walker"
+date: "2/22/2017"
+output: html_document
+---
+Quiz: dplyr
+```{r Quiz Problems, echo=TRUE, message=FALSE, warning=FALSE}
+library(tidyverse)
+library(dplyr)
+library(knitr)
+library(ggplot2)
+#1
+df <- mtcars %>% mutate(hp_rank = cut(hp, breaks = c(1, 100, 150, Inf), labels = c("low", "medium", "high")))
+
+#2
+mpg_table <- mtcars %>% 
+  mutate(mean_mpg_all = mean(mpg)) %>%
+  group_by(cyl) %>%
+  mutate(mean_mpg_by_cyl = mean(mpg), above_all = mpg > mean_mpg_all, above_cyl =mpg > mean_mpg_by_cyl) %>%
+  summarise(n_above_mean_all = sum(above_all), n_above_cyl = sum(above_cyl))
+
+#3
+p <- ggplot(mtcars, aes(x = factor(cyl), y = mpg)) +
+  geom_boxplot()
+p
+p2 <- ggplot(mtcars, aes(x = factor(cyl), y = mpg, fill = factor(gear))) +
+  geom_boxplot()
+p2
+
+#4
+scores <- data_frame(id = c(1:6), 
+                     group_id = c(1211, 1311, 2634, 1311, 1211, 2634), 
+                     exam_1 = c(67, 77, 45, 92, 83, 70),
+                     exam_2 = c(85, 76, 69, 94, 88, 80),
+                     exam_3 = c(91, 94, 88, 79, 97, 100))
+
+kable(scores, align = 'c')
+```
+Let's summarize the data
+In the first example we summarize the data into an untidy, wide data table:
+```{r summarizing, echo = TRUE}
+#mean exam_grade by group id
+
+#untidy way
+mean_exam_grades <- scores %>% 
+                    group_by(group_id) %>%
+                    summarise(exam_1 = mean(exam_1),
+                              exam_2 = mean(exam_2),
+                              exam_3 = mean(exam_3))
+
+kable(mean_exam_grades, align = 'c')
+```
+Now, let's look at the tidy version
+What makes a data table tidy?
+
+* Each variable is a separate column (score, exam)
+* Each observation is a separate row
+* Each value is a separate cell
+
+I can do this by using the `gather` function. 
+It gathers the rows into distinct columns using a key-value pairing.
+```{r tidy_version}
+#tidy version
+tidy_exam_grades <- scores %>% 
+                    gather(key = exam, value = score, exam_1:exam_3) %>%
+                    group_by(group_id, exam) %>%
+                    summarise(score = mean(score))
+
+kable(tidy_exam_grades, align = 'c', caption = 'Average Exam Score by Group_ID')
+```
+
+Say I wanted to convert my original data frame to a long format and back to a wide format. I can use the `spread` function
+```{r spread function, echo = TRUE}
+long_scores <- scores %>% gather(key = exam, value = score, exam_1:exam_3)
+long_scores
+
+wide_score <- long_scores %>% spread(key = exam, value = score)
+wide_score
+```
+But be careful using spread. 
+If you don't have an index, (a unique row_id value), you won't be able to spread the data.
+
+```{r spread error, echo = TRUE}
+
+ldf <- long_scores %>% select(-id)
+wdf <- ldf %>% spread(key = exam, value = score)
+```
+

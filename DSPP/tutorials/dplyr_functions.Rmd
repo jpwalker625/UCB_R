@@ -1,0 +1,26 @@
+---
+title: "Useful DPLYR Functions"
+author: "Joseph Walker"
+date: "February 16, 2017"
+output: html_document
+---
+### This document provides examples of useful `dplyr` functions.
+
+The following examples use the `flights` data from the `nycflights13` package.
+
+```{r setup, include=FALSE}
+
+library(nycflights13)
+library(dplyr)
+
+# filter (pick their observations by their values)
+
+# arrange (order observations of specified variables)
+arrange(flights, year, month, day)
+
+#select (pick out specific columns)
+
+#mutate
+
+```
+
