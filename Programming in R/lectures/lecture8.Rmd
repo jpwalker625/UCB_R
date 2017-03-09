@@ -1,0 +1,83 @@
+---
+title: "Lecture 8"
+output: html_notebook
+---
+
+###More On GGPLOT
+
+stat = 'identity' used to plot the actual data of your 'y' aesthetic
+
+```{r}
+library(ggplot2)
+cool <- aggregate(x = list(mpg = mtcars$mpg),by = list(cyl = mtcars$cyl), FUN = mean)
+ggplot(cool, aes(x = factor(cool$cyl), y = cool$mpg))+ geom_bar(stat = 'identity')
+
+```
+
+###apply functions
+
+```{r}
+m <- matrix(seq(1,16),4,4)
+m
+apply(m,1,min)
+#1 = by row, #2 = by column
+
+set.seed(11273)
+j <- matrix(rnorm(25),5,5)
+?list()
+
+apply(j,2,sqrt)
+```
+
+###dplyr
+```{r}
+library(dplyr)
+glimpse(mtcars)
+
+mtcars %>% select(cyl)
+
+mtcars %>% tail()
+
+mtcars %>% select(cyl,gear)
+
+mtcars[,'cyl'] %>% unique() %>% sort()
+
+#FUNCTIONAL PROGRAMMING WAY
+subset(mtcars[1:5,c('cyl','gear')],gear == 3)
+
+mtcars %>% select(cyl,gear) %>%
+slice(1:5) %>%
+filter(gear == 3)
+
+mtcars %>% group_by(gear) %>% summarise(mpg_by_gear = mean(mpg))
+
+mtcars <- mtcars %>% mutate(name = (row.names(mtcars))
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

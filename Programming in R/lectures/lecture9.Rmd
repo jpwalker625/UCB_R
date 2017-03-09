@@ -1,0 +1,44 @@
+---
+title: "Lecture 9"
+output: html_notebook
+---
+Joseph Walker -- 11/02/2016 -- Lecture 9
+
+###Stat Functions
+
+scale(x, center = TRUE, scale = TRUE)
+  generates the z scores for a data frame or vector
+  z-score == z = (x - u) / SD
+(v-mean(v))/sd(v)
+
+```{r}
+v <- c(1,2,3,4,5,6)
+scale(v) == (v-mean(v))/sd(v)
+
+```
+
+Regression
+using Yellowstone's Old Faithful data (faithful)
+```{r}
+lmo <- lm(faithful, formula = eruptions~waiting)
+lmo
+#pulling coefficients from your linear model
+coefficients(lmo)
+coef(lmo)
+
+#summary stats of your linear model
+summary(lmo)
+
+#correlation of your variables. correlation is similar to r^2, without the ^2
+cor(faithful)
+
+detach(faithful)
+p <- ggplot(faithful, aes(x = waiting, y  = eruptions)) + geom_point()
+q <- p + geom_smooth() 
+q
+#or 
+p + geom_smooth(method = 'loess')
+
+
+```
+

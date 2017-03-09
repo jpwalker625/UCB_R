@@ -1,0 +1,189 @@
+---
+title: "Programming With R, Final Project"
+author: "Joseph Walker"
+date: "November 18, 2016"
+output: html_document
+---
+Hello fellow R enthusiast,
+In this document, I present to you a tutorial on data manipulation, text mining, and analysis. All using R, of course.
+
+As 'big data' becomes more powerful and the ability to access public information becomes increasingly easier (for better or worse, one may argue),a simple google search is all it takes to find information, tutorials, and how-to's on nearly any topic you can think up. I thought it would be interesting to peak into the realm of the popular scoial media platform Twitter to analyze the tweets of political figures prominent to this election. While this sort of analysis is not a novel concept, the data and the analysis performed in this document is a distinct example of what is possible with the use of R. 
+
+Giving credit where credit is due, Thank you to Julia Silge, whose blog was invaluable in opening my eyes to what is possible and for helping to guide through some of the analysis below. More on her here:  <http://juliasilge.com/blog/Joy-to-the-World/>
+
+###Step One: Authorization & Access to Twitter
+*  First, we need to create an account with twitter and register as a developer:   <https://apps.twitter.com/>. 
+*  Second, we need to create an app.  Once you've logged in to the site above. Click the *create new app* button and fill out tehe following fields: name, description and website (since we're only creating the app to gain twitter access information, the website is arbitrary and can be any functioning website you want). 
+*  In the *keys and access tokens* tab, you will find all the information you need to establish a connection.  
+*  In a new R script, load `library(twitteR`)
+*  Next, assign the following using the information from the app we have created.   
+**consumer_key <- 'your_consumer_key'**  
+**consumer_secret <- 'your_consumer_secret'**    
+**access_token <- 'your_access_token'**    
+**access_secret <- 	'your_access_secret'**    
+**options(httr_oauth_cache=T)** -- creates a cache file that allows you to maintain access between R sessions
+**setup_twitter_oauth(consumer_key, consumer_secret, access_token, access_secret)**
+
+You should get a message indicating you are connected.
+
+### Step Two: Pull Data from Twitter
+
+Now we will use the `userTimeline` function to pull some data.
+
+**trump <- userTimeline(user = "realdonaldtrump", n = 3200)**      
+**clinton <- userTimeline(user = "hillaryclinton", n = 3200)**      
+**sanders <- userTimeline(user = "sensanders", n = 3200)**   
+**obama <- userTimeline(user = 'BarackObama', n = 3200)**
+
+*3200 is the maximum number of results that will be returned, as defined by the function/package.*
+
+`twListToDF` is a nifty function that converts the information into a dataframe.  
+**trump_df <- twListToDF(trump)**  
+**clinton_df <- twListToDF(clinton)**  
+**sanders_df <- twListToDF(sanders)**
+**obama_df <- twListToDF(obama)**
+
+*Twitter sets rate limits on the amount of calls/requests to the API for an individual user (and can take quite a while to retrieve the data depending on the size of the request) so it's a good idea to save the data.*
+
+**write.csv(trump_df, "trump_df.csv",row.names = FALSE)**   
+**write.csv(clinton_df, "clinton_df.csv",row.names = FALSE)**    
+**write.csv(sanders_df, "sanders_df.csv",row.names = FALSE)**  
+**write.csv(obama_df, "obama_df.csv",row.names = FALSE)**    
+
+And now we're ready to explore the data.
+
+###Step 3: Cleaning Data, Text Mining, & Analysis
+```{r Read in Twitter Data, echo=TRUE, message=FALSE, warning=FALSE}
+trump_df <- read.csv("trump_df.csv")
+clinton_df <- read.csv("clinton_df.csv")
+sanders_df <- read.csv("sanders_df.csv")
+obama_df <- read.csv("obama_df.csv") 
+
+##bind dataframes
+all_tweets <- rbind(trump_df, clinton_df, sanders_df, obama_df)
+
+#Subset columns of interest
+all_tweets <- subset(all_tweets, select = c(text, favoriteCount, created, statusSource, screenName, retweetCount, isRetweet, retweeted))
+
+#rename the factors of the 'screenName' column
+library(forcats)
+
+#POTUS = President of the United States
+all_tweets$screenName <- fct_recode(all_tweets$screenName, c(Trump = "realDonaldTrump", Clinton = "HillaryClinton", Bernie = 'SenSanders', POTUS = 'BarackObama'))
+```
+
+First, let's take a look at how many tweets there are for each candidate. 
+
+```{r proportion of tweets, echo=TRUE, message=FALSE, warning=FALSE}
+library(knitr)
+
+freq <- as.data.frame(table(all_tweets$screenName))
+
+prop <- as.data.frame(prop.table(table(all_tweets$screenName)))
+
+tweets <- merge(freq,prop,by = 'Var1')
+tweets$Freq.y <- tweets$Freq.y * 100
+
+kable(tweets, align = 'c', col.names = c('candidate','tweet count', 'proportion'), digits = 2, caption = "Tweet Count per Candidate")
+```
+
+Senator Bernie Sanders has been getting after it!
+
+In the next section, I'm going to use some text mining techniques to analyze the tweets. First off we need to build a `corpus`. Traditionally, a corpus is a collection of written texts, usually of a particular author or subject matter. In the context of text mining analysis, it generally refers to a vector of words that you want to analyze. Below, I am going to build a corpus out of all the tweets and make a `wordcloud` of the most commonly used words.
+
+```{r Build wordcorpus, echo=TRUE, message=FALSE, warning=FALSE, dpi=200}
+library(tm)
+library(wordcloud)
+#Build a corpus of text based on our tweets.
+wordcorpus <- Corpus(VectorSource(all_tweets$text))
+
+#Utilize tm_map to clean up the text. The functions are fairly straightforward.
+wordcorpus <- tm_map(wordcorpus, removePunctuation)
+wordcorpus <- tm_map(wordcorpus, content_transformer(tolower))
+
+# 'stopwords' do not contain contextual significance and will be removed. These are words like: 'the', 'as', 'from' 'no', etc...
+wordcorpus <- tm_map(wordcorpus, removeWords,stopwords('english'))
+
+wordcorpus <- tm_map(wordcorpus, stripWhitespace)
+
+##create document-term-matrix to sort words (terms) from each tweet (document). This is a really useful function to individualize words of a document and perform statistics on them.
+dtm <- DocumentTermMatrix((wordcorpus))
+dtm
+
+#frequency of words
+freq <- colSums(as.matrix(dtm))
+wf <- data.frame(words = names(freq),freq = freq, row.names = NULL)
+wf <- wf[order(wf$freq,decreasing = TRUE),]
+
+#plot wordcloud
+set.seed(127)
+pal <- rainbow(start = .65 , end = 0, n = 5)
+
+wordcloud(words = head(wf$words,100)
+          ,freq = wf$freq
+          ,scale = c(2,.3)
+          ,random.order = FALSE
+          ,random.color = FALSE
+          ,colors = pal
+          ,rot.per = .35)
+```
+
+Very cool! It appears that the most frequent word in our wordcloud is 'people'.  Here are some of the other most frequent words that appear in the tweets:
+
+```{r frequency of words, echo = TRUE}
+kable(head(wf,20),align = 'c',caption = 'Most Frequently Tweeted Words of Four Political Candidates',row.names = FALSE)
+```
+
+Now, let's take a look at the sentiment of the tweets by assiging emotional valence to the words.
+
+```{r twitter sentiment, echo=TRUE, message=FALSE, warning=FALSE,out.width = '3000px'}
+library(syuzhet)
+library(ggplot2)
+
+sentiment <- (get_nrc_sentiment(as.character(all_tweets$text)))
+tweet_sentiment <- cbind(all_tweets,sentiment)
+
+
+attach(tweet_sentiment)
+
+tweet_sentiment <- aggregate(c(list(anger = anger),list(anticipation = anticipation),list(disgust = disgust), list(fear = fear), list(joy = joy), list(sadness = sadness), list(surprise = surprise), list(trust = trust), list(negative = negative), list(positive = positive)), by =  list(screenname = screenName), FUN = sum)
+
+detach(tweet_sentiment)
+
+library(reshape2)
+#reshape the data to make it easier to plot
+tweet_sentiment <- melt(tweet_sentiment)
+colnames(tweet_sentiment)[2] <- "sentiment"
+
+pal <- brewer.pal(n = 10, name = 'Set3')
+p <- ggplot(tweet_sentiment, aes(x = sentiment, y = value))
+p + geom_bar(stat = 'identity', aes(fill = sentiment)) +
+    facet_grid(screenname~.) +
+    labs(title = 'Sentiment of Political Tweets', x = 'Sentiment', y = 'Total Word Count') +
+    scale_fill_manual(values = pal, name = "Sentiment Legend") +
+    theme_dark() +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+And finally, let's take a look at when and how often each candidate is tweeting.
+
+```{r Time Analysis of Tweets, echo = TRUE, message=FALSE, warning=FALSE, out.width = '3000px'}
+library(lubridate)
+library(wesanderson)
+all_tweets$created <- parse_date_time(all_tweets$created, orders = "%y-%m%d %H:%M:%S")
+colnames(all_tweets)[3] <- "date"
+
+#all tweets are from 2016
+unique(year(all_tweets$date))
+
+tweets_per_month <- aggregate(list(tweets = day(all_tweets$date)), by = c(list(candidate = all_tweets$screenName), list(month = month(all_tweets$date,label = TRUE,abbr = TRUE))), FUN = length)
+
+p <- ggplot(tweets_per_month, aes(x = month, y = tweets, group = candidate))
+p + geom_line(size = 1.75, alpha = .75, aes(color = candidate)) + 
+    geom_point(size = 1) +
+    scale_color_manual(values = c("firebrick","royalblue","chartreuse4","thistle4")) +
+    labs(title = 'Tweets over Time', x = 'Month', y = 'Tweets')
+
+```
+
+

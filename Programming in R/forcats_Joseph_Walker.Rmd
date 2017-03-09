@@ -1,0 +1,87 @@
+---
+title: "A Brief Introduction to `forcats`"
+author: "Joseph Walker"
+date: "September 28, 2016"
+output: html_document
+---
+
+`forcats` is a new package with functions aimed at helping you deal with factors. But before we dive in, let's take a look at how factors work.
+
+Factors are simply categorical variables, useful for controlling the levels and order of a vector.
+
+Here's an example:
+```{r Example 1, Echo = TRUE}
+#colors is a character vector of length nine consisting of colors: red, blue, & green
+
+colors <- c("red","blue","green","green","red","blue","red","green","blue")
+class(colors)
+
+#The factor() function works by assigning integers (number values) to the categorical values (red, blue, green) of the vector or variable. 
+
+colors <- factor(colors)
+print(colors)
+class(colors)
+
+str(colors)
+
+#Notice that each color is a level, and underlying each level is an integer associated with that level; red = 3, green = 2, blue = 1.
+
+#We can reorder the levels if we want to:
+colors <- factor(colors, levels = c("red","blue", "green"))
+print(colors)
+#The order of the vector stays the same, but now the order of the levels has changed so that red = 1, blue = 2, green = 3
+str(colors)
+```
+
+Factors are a useful data structure that allow you to have more control over how you analyze and visualize your data.
+```{r Example 2, Echo = TRUE}
+#Let's compare the summary function for colors as a character vector and as a factor.
+colors <- c("red","blue","green","green","red","blue","red","green","blue")
+summary(colors)
+
+colors <- factor(colors, levels = c("red","blue", "green"))
+summary(colors)
+
+#Each factor is summarized separately
+```
+
+
+As useful as factors are, they can be quite a pain to work with at times. Luckily, `forcats` has functions that allow you to manipulate factors. 
+
+First, let's install the package using:
+`install.packages("forcats")`
+
+```{r install/load forcats, Echo = TRUE}
+#Now we can load the package
+library(forcats)
+```
+
+One useful function of `forcats` is `fct_recode`. This allows you to change the level values of a factor. Here's an example:
+
+```{r change level values, ECHO = TRUE}
+#Let's use the airquality data set that comes pre-installed in R
+str(airquality)
+
+#The month column is data type integer, let's change it to a factor 
+airquality$Month <- factor(airquality$Month)
+print(airquality$Month)
+
+#Let's rename the months using the fct_recode function. 
+airquality$Month <- fct_recode(airquality$Month, May = '5', June = '6', July = '7', Aug = '8', Sept = '9')
+print(airquality$Month)
+
+plot(x = airquality$Month,y = airquality$Temp, xlab = "Month", ylab = "Temp", main = "A plot of daily temps recorded per month",cex.main = .75, col.main = 'magenta')
+```
+
+Another useful function is `fct_relevel`. This function allows us to change the level order.
+```{r change level order, ECHo = TRUE}
+airquality$Month <- fct_relevel(airquality$Month, 'Sept', 'Aug', 'July', 'June', 'May')
+
+levels(airquality$Month)
+# This may not seem useful at first, but when you need to visualize your data in a particular way, the fct_relevel function is extremely useful...
+
+plot(x = airquality$Month,y = (airquality$Temp), xlab = "Month", ylab = "Temp", main = "A plot of daily temps recorded per month",col.main = 'magenta', sub = "Notice how the order of the level 'Month' has changed",cex.main = .75, cex.main = .75, col.sub = 'red')
+
+```
+
+

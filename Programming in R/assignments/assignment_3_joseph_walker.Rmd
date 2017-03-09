@@ -1,0 +1,189 @@
+---
+title: "Assignment 3"
+author: "Joseph Walker"
+date: "October 21, 2016"
+output: html_document
+---
+Assignment 3 -- Joseph Walker -- jpwalker625@gmail.com
+
+###Problem 1 
+Use the data file student_data.csv to generate the following. Note: to receive credit, use only base graphics to complete the problems.
+- Read data file student_data.csv into a data frame named sdf, and attach the data frame.
+```{R Problem 1, echo=TRUE}
+sdf <- read.csv("student_data.csv")
+```
+Use sdf to complete the following plots:
+A. Use base graphics plot to graph math by write. Use a filled triangle point (pch = 24) and fill color (bg) blue to build your graph. Add a custom main title to your graph.
+```{R Problem 1A, echo = TRUE}
+plot(sdf$math, sdf$write, type = "p", main = "Math vs. Write", xlab = 'Math', ylab = 'Write', pch = 24, bg = "blue")
+```
+
+B. Use the base graphics boxplot function to generate an orange box plot for the sdf read scores. Add the label "Reading Scores" to the x axis.
+```{r Problem 1B, echo= TRUE}
+boxplot(sdf$read, xlab = "Reading Scores", col = "orange")
+```
+
+###Problem 2 
+Download (from Canvas) the resource file state_dataset.csv to complete the following problems:
+Create a data frame state_df consisting of the columns in state_dataset.csv and an additonal column of corresponding state abbreviations using the built-in data vector state.abb.
+```{r Problem 2, echo = TRUE}
+state_df <- read.csv("state_dataset.csv")
+state_df <- cbind(state_df, state.abb)
+str(state_df)
+```
+ 
+Use state_df to plot using base graphics only:
+A. A scatterplot of illiteracy by murder with a title, using the X character.
+```{r Problem 2A, echo = TRUE}
+plot(state_df$illiteracy, state_df$murder,  xlab = "illiteracy", ylab = "Murder", main =  "States with Lower Illiteracy Rates Have Less Murders", cex.main = .75, pch = 4, col = 'red')
+```
+
+B. An orange barplot consiting of the state abbreviations on the x axis and the frost value on the y axis
+```{r Problem 2B, echo = TRUE}
+barplot(height = state_df$frost,names.arg = state.abb, cex.names = .75, ylim = c(0,200),xlab = 'State',ylab = "Frost", col = "orange", las = 2,main = "Frost Levels by State" )
+``` 
+
+C. A pie chart showing the income of the states: California, Texas, New York, Illinois, and Other (consisting of all others). Add a title to your plot and some customization. Note the customizations you added as a comment in your code.
+```{r Problem 2C, eco = TRUE}
+slices <- c(state_df$income[state_df$state.abb == 'CA'],state_df$income[state_df$state.abb == 'TX'],state_df$income[state_df$state.abb == 'NY'], sum(state_df$income[!(state_df$state.abb %in% c('CA','NY','TX'))]))
+labels <- c('CA', 'TX', 'NY','Other')
+labels <- paste(labels,slices, sep = "-")
+pie(x = slices, labels = labels, main = "State Income Levels", col = rainbow(length(labels),start = 1, end = .8))
+```
+ 
+
+
+
+####Problem 3A Build the data frame:
+Use the data set in yrbssn.csv.zip (unzip) on our Canvas site to complete this problem.
+
+Create a data frame yrbssn_df for the years 2011 and 2013 only, with the following field names listed in column 1, source in column 2 of the table below. Use the field names in column 1, and the mappings in column 3.
+```{r Problem 3 Setup, echo=TRUE}
+#The following code used to build the table, **not part of the solution**
+yrbssn_df.Field.Name <- c('year', 'gender', 'grade', 'height', 'weight', 'active', 'lifting')
+
+source.yrbssncsv.Data.File.Field <- c('year', 'sex', 'grade', 'stheight', 'stweight', 'qn80','qnmusclestrength')
+
+field.value.mappings <-c('numeric,as given','1, 2 map to female, male','1, 2, 3, 4 map to grades 9, 10, 11, 12','meters (convert to inches)','kg (convert to pounds)','During the past 7 days, on how many days were you physically active for a total of at least 60 minutes per day? (Add up all the time you spent in any kind of physical activity that increased your heart rate and made you breathe hard some of the time.) A. 0 days B. 1 day C. 2 days D. 3 days E. 4 days F. 5 days G. 6 days H. 7 days','On how many of the past 7 days did you do exercises to strengthen or tone your muscles, such as push-ups, sit-ups, or weight lifting? A. 0 days B. 1 day C. 2 days D. 3 days E. 4 days F. 5 days G. 6 days H. 7 days')
+
+options(width = 10000)
+
+setup <- data.frame(yrbssn_df.Field.Name, source.yrbssncsv.Data.File.Field, field.value.mappings,row.names = NULL,check.rows = TRUE)
+colnames(setup) <- c("field name", 'source field', 'field value mappings')
+library(knitr)
+kable(setup)
+
+```
+
+*--------------------------------------------------------------------------------------*
+
+In a single code chunk, include the code that:
+
+* reads in the csv to yrbssn_df
+
+* performs the field mappings, operations to transform the data set
+
+* Use a call to str(yrbssn_df) to verify your results (do not print the entire data frame!)
+
+```{r Problem 3A, echo = TRUE}
+#Read in the data
+yrbssn_df <- read.csv("yrbssn.csv")
+
+#subset the data as specified
+yrbssn_df <- yrbssn_df[yrbssn_df$year %in% c('2011','2013'),c("year","sex","grade","stheight","stweight","qn80","qnmusclestrength")]
+
+#rename column names
+#(yrbssn_df.Field.Name assigned in code above that built the field names/mappings table)
+colnames(yrbssn_df) <- c(paste(yrbssn_df.Field.Name,sep = ','))
+
+#transform field value mappings
+yrbssn_df$year <- as.numeric(yrbssn_df$year)
+yrbssn_df$gender[yrbssn_df$gender == '1'] <- 'female'
+yrbssn_df$gender[yrbssn_df$gender == '2'] <- 'male'
+
+yrbssn_df$grade[yrbssn_df$grade == '1'] <- '9'
+yrbssn_df$grade[yrbssn_df$grade == '2'] <- '10'
+yrbssn_df$grade[yrbssn_df$grade == '3'] <- '11'
+yrbssn_df$grade[yrbssn_df$grade == '4'] <- '12'
+
+#conversion factor from meters to inches = 39.3701
+yrbssn_df$height <- yrbssn_df$height * 39.701
+
+#conversion factor from kgs to lbs = 2.2
+yrbssn_df$weight <- yrbssn_df$weight * 2.2
+
+str(yrbssn_df)
+```
+
+###Problem 3B 
+Generate a table (use the kable() function defined in the package knitr) that includes the following:
+
+* mean height, standard deviation height, mean weight, standard deviation weight
+
+```{r Problem 3B, echo = TRUE}
+library(knitr)
+stats.df <- yrbssn_df[,c('height','weight')]
+stats.df <- data.frame(mean(yrbssn_df$height, na.rm = TRUE),sd(yrbssn_df$height, na.rm = TRUE),mean(yrbssn_df$weight, na.rm = TRUE),sd(yrbssn_df$weight, na.rm = TRUE))
+
+cnames <- c('mean.height (inches)','sd.height (inches)','mean.weight (lbs)','sd.weight (lbs)')
+
+kable(stats.df,col.names = cnames,caption = 'Summary Stats for Height & Weight',align = 'c')
+```
+
+###Problem 3C 
+Use base graphics to build three separate frequency plots of the following on the X axes, Frequency on the Y axes:
+
+####grade
+```{r Problem 3C-grade, echo = TRUE}
+library(forcats)
+yrbssn_df$grade <- factor(yrbssn_df$grade)
+yrbssn_df$grade <- fct_relevel(yrbssn_df$grade,'9','10','11','12')
+
+grade.frequency <- aggregate(list(length = yrbssn_df$grade), list(grade = yrbssn_df$grade), FUN = length)
+
+barplot(height = grade.frequency$length, names.arg = grade.frequency$grade ,main = 'Frequency of Grades',xlab = 'Grade',ylab = 'Frequency',col = rainbow(n = 4))
+```
+
+####height (inches)
+```{r Problem 3C-height, echo = TRUE}
+height.frequency <- aggregate(list(length= yrbssn_df$height), list(height = yrbssn_df$height), FUN = length)
+barplot(height = height.frequency$length, names.arg = round(height.frequency$height, digits = 2), main = 'Frequency of Heights',xlab = 'Height (in.)',ylab = 'Frequency', col = rainbow(n= length(height.frequency$height),start = .8,end = .6),las = 2, cex.names = .75)
+```
+
+####weight (pounds)
+```{r Problem 3C-weight, echo = TRUE}
+weight.frequency <- aggregate(list(length = yrbssn_df$weight), list(weight = yrbssn_df$weight), FUN = length)
+
+hist(yrbssn_df$weight, xlab = 'Weight (lbs)',breaks = 25, col = cm.colors(25),labels = TRUE,main = 'Frequency of Weights (25 Bins)')
+axis(side = 1,at = seq(50,400,10),labels = FALSE)
+```
+ 
+
+###Problem 3D 
+Produce tables (kable()) of the following:
+
+####mean weight by year (mean weight (x) by years 2011, 2013 (y))
+```{r Problem 3D - (mean)weight by year, echo = TRUE}
+mean.weight.by.year <- aggregate(list(weight = yrbssn_df$weight), list(year = yrbssn_df$year),FUN = mean, na.rm = TRUE)
+kable(mean.weight.by.year,align = 'c',caption = 'Mean Weight by Year')
+```
+
+####standard deviation weight by year (SD weight (x) by years 2011, 2013 (y))
+```{r Problem 3D - (sd) weight by year, echo = TRUE}
+sd.weight.by.year <- aggregate(list(weight = yrbssn_df$weight),list(year = yrbssn_df$year), FUN = sd, na.rm = TRUE)
+kable(sd.weight.by.year,align = 'c',caption = 'Standard Deviation from the Mean Weight by Year')
+```
+
+####mean height by gender
+```{r Problem 3D - (mean) height by gender, echo = TRUE}
+mean.height.by.gender <- aggregate(list(height = yrbssn_df$height), list(gender = yrbssn_df$gender), FUN = mean, na.rm = TRUE)
+kable(mean.height.by.gender, align = 'c', caption = 'Mean Height by Gender')
+```
+ 
+###Problem 3E 
+
+Boxplots of height for each grade
+```{r Problem 3E, echo = TRUE}
+boxplot(formula(yrbssn_df$height~yrbssn_df$grade), col = topo.colors(4, .6),xlab = 'Grade', ylab = 'Height', main = 'Heights by Grade')
+```
+

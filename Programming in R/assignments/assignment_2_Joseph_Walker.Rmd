@@ -1,0 +1,221 @@
+---
+title: "assignment_2_Joseph_Walker"
+author: "Joseph Walker"
+date: "September 23, 2016"
+output: html_document
+---
+1. What happens when you create a vector of size 10 and you reference the 11th element, e.g., v[11]? What happens to the 11th element if you assign a value to the 12th? Write some short R statements that demonstrates the result along with a brief (1-2 sentences) explanation.
+
+```{r Problem 1, echo=TRUE, message=FALSE, warning=FALSE}
+#Create Vector with 10 elements
+v <- 1:10
+
+#subsetting the 11th element of v returns NA because there is no 11th element
+v[11]
+
+#If we assign a value to the 12th element of vector v, our vector now has a length of 12, where the 11th element is NA
+v[12] <- 12
+print(v)
+ 
+```
+
+2. Give the R code to create a character vector cv with the string "abc123def" repeated 67 times as individual elements in the vector ("abc123def", abc123def, ...). Create another vector nv with the numbers 123342 and 402001 repeated together, one after the other (123342, 402001, 123342, 402001), 251 times. Do not print the data structures, just the R statements that creates them.
+
+```{r Problem 2, echo=TRUE}
+# Create vector cv with string "abc123def" repeated 67 times
+cv <- rep("abc123def", 67)
+
+# Create vector nv with 123342 and 402001 repeated one after another 251 times
+nv <- rep(c(123342, 402001), 251)
+```
+
+3. Given two numeric vectors, a and b, of the same (arbitrary) size, write an expression that generates a third vector, c, containing either TRUE or FALSE depending on whether the corresponding elements of b are multiples of a. Example: a <- c(2, 3) b <- (6, 14) result c is TRUE, FALSE.
+
+```{r Problem 3, echo = TRUE}
+#example
+a <- c(2,4,5)
+b <- c(4,10,15)
+c <- b%%a == 0
+print(c)
+```
+
+
+4. Given a vector v <- floor(runif(1000) * 100), provide the two following R commands:
+
+(1) Whether 88 appears as an element in v.
+(2) Whether all of the elements are non-zero.
+(3) How many elements between 13 and 17 (inclusive) appear in v, and at which positions?
+
+```{r problem 4, echo=TRUE}
+#Given vector v
+v <- floor(runif(1000) * 100)
+
+#1)Whether 88 appears as an element in V?
+any(v == 88)
+
+#2)Are all the elements non-zero?
+all(v != 0)
+
+#3)How many elements in v between 13 & 17?
+length(which(v >= 13 & v<=17))
+
+#at which positions?
+which(v>=13 & v<=17)
+
+```
+
+5. Given vectors v and w, generate a third vector z containing the elements that appear in the same positions in both v and w.
+```{r Problem 5, echo= TRUE}
+v <- c(2,3,7)
+w <- c(2,5,7)
+z <- v[v==w]
+print(z)
+```
+
+6. Use: numeric, character, and logical modes only to answer this question.
+
+Explain how R matrix objects handle attempts at mixed-mode variable assignment. Write R code using vector objects that demonstrates the mode hierarchy order. In other words: show the resulting mode of the various possible mixed-mode assignments.
+```{r Problem 6, echo = TRUE}
+#Vector objects must all be of the same mode. R will automatically coerce the values in a vector to the same mode type based on the mode hierarchy. The hierarchy is as follows: character, numeric, logical.
+
+# A vector with numeric, logical, and character values will coerce all the values to characters
+aa <- c(1, TRUE, 3, FALSE, 4, "j")
+mode(aa)
+
+#A vector with character and logical values coerces all values to characters
+bb <- c("1",TRUE,"j", FALSE)
+mode(bb)
+
+# A vector with character and numeric values coerces all values to characters
+numvec <- c(5,6,7)
+charvec <- c("aa","bb","cc")
+newvec <- c(numvec,charvec)
+mode(newvec)
+
+#A vector with only numeric and logical will coerce the values to numeric
+cc <- c(1,2,3,FALSE,TRUE,FALSE)
+mode(cc)
+```
+7. Using the complete vectors a <- c(1,2,3), b <- c(4,5,6) only, write the R code necessary to create the following matrix:
+
+1 2 3 1
+4 5 6 2
+1 2 3 3
+
+```{r Problem 7, echo = TRUE}
+a <- c(1,2,3)
+b <- c(4,5,6)
+xyz <- matrix(cbind(rbind(a,b,a),a),nrow=3,ncol=4)
+class(xyz)
+print(xyz)
+
+```
+8. Assume exams is a data frame consisting of student id's, scores, and course_id's. Give the code necessary to omit any rows containing missing values.
+```{r Problem 8, echo = TRUE}
+student_id <- c(1:10)
+scores <- rep(c("a","b","c","d","f"),2)
+course_id <- c("101",NA,"102","103",NA,"101","102","103",NA,NA)
+exams <- na.omit(data.frame(student_id,scores,course_id))
+print(exams)
+```
+9. Create a data frame df with the following named columns:
+
+1) zeros - consists of 212 zeros .
+2) three_mults - consist of the first 212 multiples of 3.
+3) digivals - consists of the two integers 1011 and 310 repeated one after the other (1011, 310, 1011, 310 ... ) 106 times.
+4) randvals - a set of uniformly distributed random numbers between 0 and 1
+5) gt_point_5 - TRUE or FALSE whether the corresponding number in randvals > .5
+```{r Problem 9, echo = TRUE}
+#1)
+zeros <- rep(0,212)
+#2)
+three_mults <- seq(from = 3, to = 212*3, by = 3)
+
+#3) 
+digivals <- rep(c(1011,310),106)
+
+#4)
+randvals <- runif(n = 212, min = 0, max = 1)
+
+#5)
+gt_point_5 <- randvals >.5
+
+#dataframe df
+df <- data.frame(zeros,three_mults,digivals,randvals,gt_point_5)
+head(df)
+tail(df)
+```
+
+10. This problem investigates the use and internal representation of Factors in R.
+
+Create a factor fruit consisting of 100 random elements ( hint: use floor(runif(100, 1, 8)) ) with the following levels:
+
+apple, orange, banana , pear, lemon, peach , mango
+
+A. Examine the representation of the factor using unclass(fruit). Briefly (1-2 sentences, maximum) explain the representation of fruits generated by unclass(fruit).
+
+B. Use the fruit factor you created in (A) above to create a data frame fruit_df that has the following three columns in the following order: 
+
+name: fruit_ name. values: the levels of fruit
+name: fruit_count. values: the number of occurrences of each of the levels in fruit
+name: fruit_prop. values: the proportion of each of the levels in the factor fruit.
+
+Note: use only the factor fruit to create the data frame, no strings or vectors other than those you generate using fruit.
+
+```{r Problem 10, echo = TRUE}
+#Part A
+fruit <- as.factor(floor(runif(100,1,8)))
+levels(fruit) <- c("apple","orange","banana","pear","lemon","peach","mango")
+print(fruit)
+unclass(fruit)
+#A class can be thought of as the character name of a level. By unclassing fruit, we remove the character name (fruit type) resulting in a factor with the original levels (1:7).
+
+#Part B
+fruit_df <- data.frame(fruit_name = levels(fruit), fruit_count = (summary(fruit)),fruit_prop = summary(fruit)/length(fruit),row.names = NULL)
+print(fruit_df)
+```
+
+11. Given the following variables:
+
+colors = c("grey", "purple", "brown", "red", "blue")
+numbers = list(17, 33, 52)
+outcomes = c(TRUE, FALSE, TRUE, TRUE, FALSE)
+set.seed(11)
+seating <- matrix(letters[floor(runif(12, 1, 27))], 3, 4)
+qlist = list(colors = colors, numbers, outcomes, 313, list('abc', 'def', 'ghi'), seating)
+(a) print the vector colors of qlist using indexing and the qlist name colors
+(b) print the element 313 of qlist
+(c) print the second element of the vector outcomes in qlist
+(d) print the element 'ghi'
+(e) assign to a new variable v a vector consisting of the second row of seating, columns 2 and 4
+(f) Assign the slice of colors consisting of "purple", "brown", and "red" to a variable new_colors
+
+```{r Problem 11, echo = TRUE}
+#variables
+colors = c("grey", "purple", "brown", "red", "blue")
+numbers = list(17, 33, 52)
+outcomes = c(TRUE, FALSE, TRUE, TRUE, FALSE)
+set.seed(11)
+seating <- matrix(letters[floor(runif(12, 1, 27))], 3, 4)
+qlist = list(colors = colors, numbers, outcomes, 313, list('abc', 'def', 'ghi'), seating)
+
+#a)
+print(qlist[["colors"]])
+
+#b)
+print(qlist[[4]])
+
+#c)
+print(qlist[[3]][[2]])
+
+#d)
+print(qlist[[5]][[3]])
+
+#e)
+v<- qlist[[6]][2,c(2,4)]
+print(v)
+
+#f)
+new_colors <- qlist[["colors"]][2:4]
+print(new_colors)
+```

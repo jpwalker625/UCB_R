@@ -1,0 +1,236 @@
+---
+title: "Bay Are Bike Share Open Data"
+author: "Joseph Walker"
+date: "November 3 2016"
+output: html_document
+---
+
+Check out the [Bay Area Bike Share](www.bayareabikeshare.com) site for more information and find the source data [here](http://www.bayareabikeshare.com/open-data).
+
+```{r Setup, echo=TRUE}
+#Widen output to make plots more visible
+knitr::opts_chunk$set(out.width='2000px', dpi=200)
+```
+##Problem 1:
+Download the data sets on the above page and use them to build two data frames named as follows, with the following fields:
+
+stations_df: station_id, name, lat, long, dockcount, landmark, installation
+
+trips_df: trip_id, duration, start_date, start_station, start_terminal, end_date, end_station, end_terminal, bike_number, subscription_type, zip_code
+
+Show the results of calling str() on your data frames to verify that your data sets have loaded correctly.
+```{r Problem 1, echo = TRUE}
+
+stations_df <- read.csv("201508_station_data.csv", header = TRUE)
+str(stations_df)
+
+library(forcats)
+
+trips_df_201402 <- read.csv("201402_trip_data.csv")
+
+#Station Name Discrepancy
+trips_df_201402$Start.Station <- fct_recode(trips_df_201402$Start.Station, "Santa Clara County Civic Center" = 'San Jose Government Center')
+trips_df_201402$End.Station <- fct_recode(trips_df_201402$End.Station, "Santa Clara County Civic Center" = 'San Jose Government Center')
+
+#Column Discrepancy
+colnames(trips_df_201402)[10] <- "Subscriber.Type"
+
+trips_df_201408 <- read.csv("201408_trip_data.csv")
+
+trips_df_201508 <- read.csv("201508_trip_data.csv")
+
+trips_df <- rbind(trips_df_201402,trips_df_201408,trips_df_201508)
+
+str(trips_df)
+```
+
+##Problem 2
+Create and show a table of the number of trips per station for the top and bottom five (ranked by count) stations.  Use knitr::kable to display your table.
+```{r Problem 2.1, echo = TRUE}
+new.df <- merge(stations_df[,c("station_id","name")],trips_df[,c("Start.Station","Trip.ID","Duration")],by.x = 'name', by.y = 'Start.Station')
+
+trip.count <- data.frame(table(new.df$name))
+names(trip.count) <- c('station name','trip.count')
+
+top5.trip <- trip.count[order(trip.count$trip.count,decreasing = TRUE)[1:5],]
+bottom5.trip <- trip.count[order(trip.count$trip.count,decreasing =  FALSE)[1:5],]
+bind.trip.count <- rbind(top5.trip,bottom5.trip)
+
+library(knitr) 
+
+kable(bind.trip.count[order(bind.trip.count$trip.count,decreasing = T),],align = 'c',caption = 'Frequency of Trips per Station',col.names = c('station name','trip count'),row.names = FALSE)
+```
+
+Create and show a table of the mean trip duration by station for the top and bottom five (ranked by mean duration) stations.
+```{r Problem 2.2, echo = TRUE}
+mean.duration <- aggregate(list(trip.duration = new.df$Duration),list(station = new.df$name), FUN = mean, na.rm = TRUE)
+top5.duration <- mean.duration[order(mean.duration$trip.duration, decreasing = TRUE)[1:5],]
+bottom5.duration <- mean.duration[order(mean.duration$trip.duration, decreasing = FALSE)[1:5],]
+bind.mean.duration <- rbind(top5.duration,bottom5.duration)
+kable(bind.mean.duration[order(bind.mean.duration$trip.duration, decreasing = TRUE),], align = 'c', caption = 'Average Trip Duration per Station',col.names = c('Station','Trip Duration'),row.names = FALSE)
+```
+
+##Problem 3:
+
+Generate a line graph of the number of rides per day system wide during the month of August.  Highlight weekends using a vertical line.
+
+```{r Problem 3, echo=TRUE, message=FALSE, warning=FALSE}
+library(lubridate)
+trips_df$Start.Date <-parse_date_time(trips_df$Start.Date,orders = "%m/%d/%y H:M")
+trips_df$week.day <- wday(trips_df$Start.Date, label = TRUE)
+
+trips_df$End.Date <-parse_date_time(trips_df$End.Date,orders = "%m/%d/%y H:M")
+
+month.august <- trips_df[month(trips_df$Start.Date)== 8,]
+month.august <- data.frame(table(day(month.august$Start.Date),year(month.august$Start.Date),month.august$week.day))
+month.august <- month.august[month.august$Freq > 0,]
+colnames(month.august) <- c("day", "year","weekday","trip count")
+
+library(ggplot2)
+
+vline.dat <- month.august[month.august$weekday %in% c('Sat','Sun'),]
+vline.dat$day <- as.numeric(vline.dat$day)
+
+p <- ggplot(month.august,aes(x = day, y = `trip count`))+
+  geom_point()+
+  geom_line(aes(group = year,color = year))+
+  labs(title = "System Wide Use for the Month of August", x = 'Day', y = 'Trip Count')+
+  theme_bw()+
+  facet_grid(facets = year~.)
+
+p + geom_vline(data = vline.dat, aes(xintercept = day, color = weekday), show.legend = TRUE,linetype = 'dashed')
+```
+
+##Problem 4:
+
+Generate some graphs to explore the distribution of trip duration (remove outliers by only including up to the 90th percentile in your dataset):
+
+```{r Problem 4, echo = TRUE}
+#Using lubridate to derive trip durations.
+trips_df$trip_interval <- as.interval(trips_df$Start.Date,trips_df$End.Date)
+trips_df$trip_duration <- as.numeric(as.duration(trips_df$trip_interval),'minutes')
+
+#Getting rid of > 90th percentile outliers.
+trips_df_90th <- trips_df[trips_df$trip_duration < quantile(trips_df$trip_duration, .9),]
+```
+
+A black histogram with "steelblue" fill
+```{r Problem 4 - histogram, echo = TRUE}
+attach(trips_df_90th)
+hist <- ggplot(trips_df_90th, aes(x = trip_duration)) +
+  geom_histogram(fill = 'steelblue'
+                 ,color = 'snow'
+                 ,binwidth = 1
+                 ,bins = length(unique(trips_df_90th$trip_duration)))+
+  scale_fill_discrete(name = 'Subscriber Type')+
+  theme_dark()+
+  ggtitle(label = 'Frequency of Trip Duration (excluding outliers)')+    
+  scale_x_continuous(name = 'Trip Duration (minutes)', breaks = unique(trip_duration))+
+  scale_y_continuous(name = 'Count',breaks = seq(0,60000,10000))
+detach(trips_df_90th)
+hist
+```
+
+A density plot
+
+```{r Problem 4 - Density, Echo = TRUE}
+attach(trips_df_90th)
+dens <- ggplot(trips_df_90th, aes(x = trip_duration, fill = Subscriber.Type))+
+  geom_density(aes(alpha = .5))+
+  scale_alpha(guide = 'none')+
+  scale_x_continuous(breaks = unique(trip_duration))+
+  scale_fill_discrete(name = 'Subscriber Type')+
+  labs(title = 'Density Plot of Trip Durations',x = 'Trip Duration (mintues)', y = 'Density')
+detach(trips_df_90th)
+dens
+```
+
+A Box Plot
+
+```{r Problem 4 - Box, echo = TRUE}
+#It is not possible to boxplot the stand alone distributions for each trip duration (Using a histogram to look at the frequency for each trip duration as above would be appropriate). You need another variable in order to generate the statistics associated with a boxplot (mean, quantiles, outliers, etc...) In this case, I decided to look at the trip durations by subcriber type. 
+
+attach(trips_df_90th)
+box.plot <- ggplot(trips_df_90th, aes(x = Subscriber.Type, y = trip_duration, color = Subscriber.Type))+
+  geom_boxplot()+
+  theme_bw()+
+  labs(title = 'Trip Durations by Subcriber Type', x = 'Subscriber Type', y = 'Trip Duration')
+detach(trips_df_90th)
+box.plot
+```
+
+###Briefly describe the distribution in a sentence - how normal does it look?
+
+--The distribution of overall trip durations is somewhat normal. By looking at the histogram, it is apparent that the majority of trips fall within the 4-11 minutes duration window. The tail is slightly longer on the right suggesting that there are more shorter trips overall.
+In the density and box plots, I grouped the trips by subscriber type to get a closer look at the data. It appers that the majority of trips are taken by subscribers. Again, the subscriber distribution appears to be 'normalish' while the customer distribution of trips follows more of a uniform distribution with the least frequent durations being on the shorter end of the spectrum between 1-5 minutes.
+
+##Problem 5:
+Generate a bar plot (single bars, not side-by-side) showing the number of trips per day of week for the top five stations (ranked by number of trips), with fill color indicating subscription type.
+Facet your plot by station.
+```{r Problem 5, echo = TRUE}
+#for fun colors
+library(wesanderson)
+
+trips.per.day <- data.frame(table(trips_df[,c("Start.Station","Subscriber.Type",'week.day')]))
+
+subdata <- trips.per.day[trips.per.day$Start.Station %in% top5.trip$`station name`,]
+
+attach(subdata)
+bar.plot <- ggplot(data = subdata, aes(x = week.day, y = Freq, fill = Subscriber.Type))+
+  geom_bar(stat = 'identity')+
+  facet_wrap(facets = ~ Start.Station, scales = 'free_x', labeller = label_wrap_gen(multi_line = TRUE))+
+  scale_fill_manual(values = wes_palette(name = 'GrandBudapest2'),name = 'Subcriber Type') +
+  labs(title = 'Trips Per Day for the Top 5 Stations', x = 'Week Day', y = 'Trip Count')+
+  theme_bw()+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0))
+detach(subdata)
+
+bar.plot 
+```
+
+##Extra Credit Problem
+* Explore the impact of weather conditions on system use. 
+  + Use the dataset: weather_df
+  + Use plot(s) in your analysis.  Be sure to include an explanation of what you are        analyzing and your results.  Use a model and/or test if appropriate.
+  
+```{r Extra Credit, echo = TRUE}
+weather_data_201402 <- read.csv("201402_weather_data.csv", header = TRUE)
+weather_data_201408 <- read.csv("201408_weather_data.csv", header = TRUE)
+weather_data_201508 <- read.csv("201508_weather_data.csv", header = TRUE)
+
+colnames(weather_data_201402)<- colnames(weather_data_201408)
+weather_df <- rbind(weather_data_201402,weather_data_201408,weather_data_201508)
+
+weather_df$PDT <-  parse_date_time(weather_df$PDT, orders = 'mdy')
+
+weather.averages.per.day <- aggregate(list('mean temp' = weather_df$Mean.TemperatureF), list('date' = weather_df$PDT), FUN = mean, na.rm = TRUE)
+
+total_trips_per_day <- data.frame(table(date(trips_df$Start.Date)))
+colnames(total_trips_per_day) <- c('date','trip count')
+total_trips_per_day$date <- parse_date_time(total_trips_per_day$date, orders  = 'ymd')
+
+
+weather_trip_data_merged <- merge(total_trips_per_day,weather.averages.per.day)
+weather_trip_data_merged$year <- year(weather_trip_data_merged$date)
+weather_trip_data_merged$month <-month(weather_trip_data_merged$date,label = TRUE)
+weather_trip_data_merged$day <- day(weather_trip_data_merged$date)
+
+attach(weather_trip_data_merged)
+weather_trip_data_merged$day_month <- as.character(paste(day,month,sep = '-'))
+
+p <-ggplot(data = weather_trip_data_merged, aes(x = mean.temp, y = `trip count`, color = mean.temp))+
+      geom_point()+
+      geom_smooth()+
+      facet_wrap(~month)+
+      scale_x_continuous("Mean Temperature")+
+      scale_color_distiller(type = 'seq',palette = 'RdBu',name = 'Mean Temp')+
+      theme_dark()+ 
+      labs(title = "Does Weather Have An Affect On System Use?", y = 'Trip Count')
+```
+
+I wanted to know if the temperature had any affect on system use. Because there were multiple recordins on a given day (varied by zip), I took the grand mean of the mean temepratures recorded on each day. I also calculated the total amount of trips on a given day across the entire system. I then merged the data together and plotted it below. There does not appear to be any correlation between the temperature and system use.
+
+```{r Final Plot, echo=TRUE}
+p
+```
+

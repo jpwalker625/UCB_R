@@ -1,0 +1,13 @@
+---
+title: "Untitled"
+author: "Joseph Walker"
+date: "October 19, 2016"
+output: html_document
+---
+
+```{r setup, echo=FALSE}
+for (i in 1:10) {
+  print(i)
+  browser()
+}
+```

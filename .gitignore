@@ -1,3 +1,10 @@
 *.json
 *.txt
 *.tsv
+*.gz
+
+*.csv
+
+*.rar
+
+Programming in R/lectures/_Rhistory
