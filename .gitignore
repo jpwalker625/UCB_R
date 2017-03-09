@@ -7,4 +7,11 @@
 
 *.rar
 
-Programming in R/lectures/_Rhistory
+#########
+R Files
+#########
+
+.Rhistory
+.Rapp.history
+.Rdata
+.tar.gz
