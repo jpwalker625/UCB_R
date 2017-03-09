@@ -1,0 +1,512 @@
+scale_color_distiller(type = 'div',palette = 'RdBu',name = 'Mean Temp')+
+theme_dark()+
+labs(title = "Does Weather Have An Affect On System Use?", x = 'TripCount', y = 'Day of the Month')
+p
+p <-ggplot(data = weather_trip_data_merged, aes(x = day, y = `trip count`, color = mean.temp))+
+geom_point()+
+facet_wrap(~month)+
+scale_x_continuous("Day",breaks = c(1,5,10,15,20,25,30))+
+scale_color_distiller(type = 'div',palette = 'RdBu',name = 'Mean Temp')+
+theme_dark()+
+labs(title = "Does Weather Have An Affect On System Use?", x = 'TripCount', y = 'Day of the Month')
+p
+p <-ggplot(data = weather_trip_data_merged, aes(x = day, y = `trip count`, color = mean.temp))+
+geom_point()+
+geom_abline('lm')+
+facet_wrap(~month)+
+scale_x_continuous("Day",breaks = c(1,5,10,15,20,25,30))+
+scale_color_distiller(type = 'div',palette = 'RdBu',name = 'Mean Temp')+
+theme_dark()+
+labs(title = "Does Weather Have An Affect On System Use?", x = 'TripCount', y = 'Day of the Month')
+p
+p <-ggplot(data = weather_trip_data_merged, aes(x = day, y = `trip count`, color = mean.temp))+
+geom_point()+
+geom_abline(slope = 'lm')+
+facet_wrap(~month)+
+scale_x_continuous("Day",breaks = c(1,5,10,15,20,25,30))+
+scale_color_distiller(type = 'div',palette = 'RdBu',name = 'Mean Temp')+
+theme_dark()+
+labs(title = "Does Weather Have An Affect On System Use?", x = 'TripCount', y = 'Day of the Month')
+p
+p <-ggplot(data = weather_trip_data_merged, aes(x = day, y = `trip count`, color = mean.temp))+
+geom_point()+
+geom_smooth(method = 'lm')+
+facet_wrap(~month)+
+scale_x_continuous("Day",breaks = c(1,5,10,15,20,25,30))+
+scale_color_distiller(type = 'div',palette = 'RdBu',name = 'Mean Temp')+
+theme_dark()+
+labs(title = "Does Weather Have An Affect On System Use?", x = 'TripCount', y = 'Day of the Month')
+p
+p <-ggplot(data = weather_trip_data_merged, aes(x = day, y = `trip count`, color = mean.temp))+
+geom_point()+
+facet_wrap(~month)+
+scale_x_continuous("Day of the Month",breaks = c(1,5,10,15,20,25,30))+
+scale_color_distiller(type = 'div',palette = 'RdBu',name = 'Mean Temp')+
+theme_dark()+
+labs(title = "Does Weather Have An Affect On System Use?", y = 'Trip Count')
+p
+q <- ggplot(data = weather_trip_data_merged, aes(x = mean.temp, y = `trip count` color = month))+
+geom_point()+
+geom_smooth()
+q <- ggplot(data = weather_trip_data_merged, aes(x = mean.temp, y = `trip count` color = month))+
+geom_point()+
+geom_smooth()
+q <- ggplot(data = weather_trip_data_merged, aes(x = mean.temp, y = `trip count`, color = month))+
+geom_point()+
+geom_smooth()
+q
+q <- ggplot(data = weather_trip_data_merged, aes(x = mean.temp, y = `trip count`))+
+geom_point()+
+geom_smooth()
+q
+p
+p <-ggplot(data = weather_trip_data_merged, aes(x = day, y = `trip count`, color = mean.temp))+
+geom_point()+
+facet_wrap(~month)+
+scale_x_continuous("Day of the Month",breaks = c(1,5,10,15,20,25,30))+
+scale_color_distiller(type = 'seq',palette = 'RdBu',name = 'Mean Temp')+
+theme_dark()+
+labs(title = "Does Weather Have An Affect On System Use?", y = 'Trip Count')
+p
+q <- ggplot(data = weather_trip_data_merged, aes(x = mean.temp, y = `trip count`))+
+geom_point()+
+geom_smooth()
+q
+q <- ggplot(data = weather_trip_data_merged, aes(x = mean.temp, y = `trip count`))+
+geom_point()+
+geom_smooth(method = 'lm')
+q
+q <- ggplot(data = weather_trip_data_merged, aes(x = mean.temp, y = `trip count`))+
+geom_point()+
+geom_smooth()
+q
+q <- ggplot(data = weather_trip_data_merged, aes(x = mean.temp, y = `trip count`, color = mean.temp))+
+geom_point()+
+geom_smooth()
+q
+q <- ggplot(data = weather_trip_data_merged, aes(x = mean.temp, y = `trip count`, color = mean.temp))+
+geom_point()+
+geom_smooth()+
+scale_color_gradient2(low = 'blue',mid = 'yellow',high = 'red')
+q
+q <- ggplot(data = weather_trip_data_merged, aes(x = mean.temp, y = `trip count`, color = mean.temp))+
+geom_point()+
+geom_smooth()+
+scale_color_gradient2(low = 'blue',mid = 'white',high = 'red')
+q
+q <- ggplot(data = weather_trip_data_merged, aes(x = mean.temp, y = `trip count`, color = mean.temp))+
+geom_point()+
+geom_smooth()+
+scale_color_gradient2(low = 'blue',high = 'red')
+q
+q <- ggplot(data = weather_trip_data_merged, aes(x = mean.temp, y = `trip count`, color = mean.temp))+
+geom_point()+
+geom_smooth()+
+scale_color_gradient2(low = 'blue',high = 'red')
+q
+q <- ggplot(data = weather_trip_data_merged, aes(x = mean.temp, y = `trip count`, color = mean.temp))+
+geom_point()+
+geom_smooth()+
+scale_color_gradient2(low = muted('blue',high = 'red')
+q
+q <- ggplot(data = weather_trip_data_merged, aes(x = mean.temp, y = `trip count`, color = mean.temp))+
+geom_point()+
+geom_smooth()+
+scale_color_gradient2(low = muted('blue'),high = 'red')
+q
+q <- ggplot(data = weather_trip_data_merged, aes(x = mean.temp, y = `trip count`, color = mean.temp))+
+geom_point()+
+geom_smooth()+
+scale_color_gradient2(low = muted('blue'),high = 'red')
+q <- ggplot(data = weather_trip_data_merged, aes(x = mean.temp, y = `trip count`, color = mean.temp))+
+geom_point()+
+geom_smooth()+
+scale_color_gradient2(low = muted('blue'),high = 'red',space = 'Lab')
+q <- ggplot(data = weather_trip_data_merged, aes(x = mean.temp, y = `trip count`, color = mean.temp))+
+geom_point()+
+geom_smooth()+
+scale_color_gradient2(low = 'blue',high = 'red',space = 'Lab')
+q
+q <- ggplot(data = weather_trip_data_merged, aes(x = mean.temp, y = `trip count`, color = mean.temp))+
+geom_point()+
+geom_smooth()+
+scale_color_gradient2(low = 'blue',high = muted('red'),space = 'Lab')
+q
+q <- ggplot(data = weather_trip_data_merged, aes(x = mean.temp, y = `trip count`, color = mean.temp))+
+geom_point()+
+geom_smooth()+
+scale_color_gradient(low = 'blue',high = muted('red'),space = 'Lab')
+q
+q <- ggplot(data = weather_trip_data_merged, aes(x = mean.temp, y = `trip count`, color = mean.temp))+
+geom_point()+
+geom_smooth()+
+scale_color_gradient(low = 'blue',high = 'red',space = 'Lab')
+q
+q <- ggplot(data = weather_trip_data_merged, aes(x = mean.temp, y = `trip count`, color = mean.temp))+
+geom_point()+
+geom_smooth()+
+scale_color_gradient(low = muted('blue'),high = 'red',space = 'Lab')
+q <- ggplot(data = weather_trip_data_merged, aes(x = mean.temp, y = `trip count`, color = mean.temp))+
+geom_point()+
+geom_smooth()+
+scale_color_gradient(low = muted("blue"),high = 'red',space = 'Lab')
+q <- ggplot(data = weather_trip_data_merged, aes(x = mean.temp, y = `trip count`, color = mean.temp))+
+geom_point()+
+geom_smooth()+
+scale_color_gradient(... = low = muted("blue"),high = 'red',space = 'Lab')
+q <- ggplot(data = weather_trip_data_merged, aes(x = mean.temp, y = `trip count`, color = mean.temp))+
+geom_point()+
+geom_smooth()+
+scale_color_gradient(...  low = muted("blue"),high = 'red',space = 'Lab')
+q
+q <- ggplot(data = weather_trip_data_merged, aes(x = mean.temp, y = `trip count`, color = mean.temp))+
+geom_point()+
+geom_smooth()+
+scale_color_gradient(low = muted("blue"),high = 'red',space = 'Lab')
+q <- ggplot(data = weather_trip_data_merged, aes(x = mean.temp, y = `trip count`, color = mean.temp))+
+geom_point()+
+geom_smooth()+
+scale_fill_continuous(low = muted("blue"), high = muted("red"))
+q
+q <- ggplot(data = weather_trip_data_merged, aes(x = mean.temp, y = `trip count`, color = mean.temp))+
+geom_point()+
+geom_smooth()+
+scale_fill_continuous(low = "blue", high = "red")
+q
+q <- ggplot(data = weather_trip_data_merged, aes(x = mean.temp, y = `trip count`, color = mean.temp))+
+geom_point()+
+geom_smooth()+
+scale_fill_discrete(low = "blue", high = "red")
+q
+q <- ggplot(data = weather_trip_data_merged, aes(x = mean.temp, y = `trip count`, color = mean.temp))+
+geom_point()+
+geom_smooth()+
+scale_fill_gradient(low = "blue", high = "red")
+q
+q <- ggplot(data = weather_trip_data_merged, aes(x = mean.temp, y = `trip count`, color = mean.temp))+
+geom_point()+
+geom_smooth()+
+scale_fill_gradient()
+q
+q <- ggplot(data = weather_trip_data_merged, aes(x = mean.temp, y = `trip count`, color = mean.temp))+
+geom_point()+
+geom_smooth()+
+scale_fill_gradient(low = 'red')
+q
+q <- ggplot(data = weather_trip_data_merged, aes(x = mean.temp, y = `trip count`, color = mean.temp))+
+geom_point()+
+geom_smooth()+
+scale_fill_gradient(low = 'red', high = 'blue')
+q
+q <- ggplot(data = weather_trip_data_merged, aes(x = mean.temp, y = `trip count`, color = mean.temp))+
+geom_point()+
+geom_smooth()+
+scale_fill_gradient(low = 'red', high = 'red')
+q
+q <- ggplot(data = weather_trip_data_merged, aes(x = mean.temp, y = `trip count`, color = mean.temp))+
+geom_point()+
+geom_smooth()+
+scale_fill_gradient(low = 'blue', high = 'red')
+q
+q <- ggplot(data = weather_trip_data_merged, aes(x = mean.temp, y = `trip count`, color = mean.temp))+
+geom_point()+
+geom_smooth()+
+scale_color_gradient(low = 'blue', high = 'red')
+q
+q <- ggplot(data = weather_trip_data_merged, aes(x = mean.temp, y = `trip count`, color = mean.temp))+
+geom_point()+
+geom_smooth()+
+scale_color_gradient2(low = 'blue',mid = 'yellow', high = 'red',midpoint = 60)
+q
+q <- ggplot(data = weather_trip_data_merged, aes(x = mean.temp, y = `trip count`, color = mean.temp))+
+geom_point()+
+geom_smooth()+
+scale_color_gradient2(low = 'blue',mid = 'yellow', high = 'red',midpoint = 65)
+q
+q <- ggplot(data = weather_trip_data_merged, aes(x = mean.temp, y = `trip count`, color = mean.temp))+
+geom_point()+
+geom_smooth()+
+scale_color_gradient2(low = 'blue',mid = 'white', high = 'red',midpoint = 60)
+q
+lmo <- lm(weather_trip_data_merged, formula = `trip count`~mean.temp)
+lm(lmo)
+summary(lmo)
+q <- ggplot(data = weather_trip_data_merged, aes(x = mean.temp, y = `trip count`, color = mean.temp))+
+geom_point()+
+geom_abline(lmo)
+q <- ggplot(data = weather_trip_data_merged, aes(x = mean.temp, y = `trip count`, color = mean.temp))+
+geom_point()+
+geom_abline(lmo)+
+scale_color_gradient2(low = 'blue',mid = 'white', high = 'red',midpoint = 60)
+q <- ggplot(data = weather_trip_data_merged, aes(x = mean.temp, y = `trip count`, color = mean.temp))+
+geom_point()+
+geom_abline(aes(lmo)+
+scale_color_gradient2(low = 'blue',mid = 'white', high = 'red',midpoint = 60)
+q
+q <- ggplot(data = weather_trip_data_merged, aes(x = mean.temp, y = `trip count`, color = mean.temp))+
+geom_point()+
+geom_abline(aes(lmo))+
+scale_color_gradient2(low = 'blue',mid = 'white', high = 'red',midpoint = 60)
+q
+q <- ggplot(data = weather_trip_data_merged, aes(x = mean.temp, y = `trip count`, color = mean.temp))+
+geom_point()+
+geom_abline('lmo')+
+scale_color_gradient2(low = 'blue',mid = 'white', high = 'red',midpoint = 60)
+q <- ggplot(data = weather_trip_data_merged, aes(x = mean.temp, y = `trip count`, color = mean.temp))+
+geom_point()+
+geom_abline(data = lmo)+
+scale_color_gradient2(low = 'blue',mid = 'white', high = 'red',midpoint = 60)
+q
+lmo <- lm(weather_trip_data_merged, formula = mean.temp~`trip count`)
+summary(lmo)
+lmo <- lm(weather_trip_data_merged, formula = `trip count`,mean.temp)
+lmo <- lm(weather_trip_data_merged, formula = `trip count`~mean.temp)
+lmo <- lm(weather_trip_data_merged, formula = `trip count`~mean.temp)
+q <- ggplot(data = weather_trip_data_merged, aes(x = mean.temp, y = `trip count`, color = mean.temp))+
+geom_point()+
+geom_abline(data = lmo)+
+scale_color_gradient2(low = 'blue',mid = 'white', high = 'red',midpoint = 60)
+q
+summary(lmo)
+p
+p <-ggplot(data = weather_trip_data_merged, aes(x = day, y = `trip count`, color = mean.temp))+
+geom_point()+
+geom_smooth()+
+facet_wrap(~month)+
+scale_x_continuous("Day of the Month",breaks = c(1,5,10,15,20,25,30))+
+scale_color_distiller(type = 'seq',palette = 'RdBu',name = 'Mean Temp')+
+theme_dark()+
+labs(title = "Does Weather Have An Affect On System Use?", y = 'Trip Count')
+p
+q <- ggplot(data = weather_trip_data_merged, aes(x = mean.temp, y = `trip count`, color = mean.temp))+
+geom_point()+
+geom_smooth()+
+facet_wrap(~month)+
+scale_color_gradient2(low = 'blue',mid = 'white', high = 'red',midpoint = 60)
+q
+p <-ggplot(data = weather_trip_data_merged, aes(x = day, y = `trip count`, color = mean.temp))+
+geom_point()+
+geom_smooth(data = weather_trip_data_merged$mean.temp)+
+facet_wrap(~month)+
+scale_x_continuous("Day of the Month",breaks = c(1,5,10,15,20,25,30))+
+scale_color_distiller(type = 'seq',palette = 'RdBu',name = 'Mean Temp')+
+theme_dark()+
+labs(title = "Does Weather Have An Affect On System Use?", y = 'Trip Count')
+p
+q
+q <-ggplot(data = weather_trip_data_merged, aes(x = month, y = `trip count`, color = mean.temp))+
+geom_point()+
+geom_smooth()+
+#scale_x_continuous("Day of the Month",breaks = c(1,5,10,15,20,25,30))+
+scale_color_distiller(type = 'seq',palette = 'RdBu',name = 'Mean Temp')+
+theme_dark()+
+labs(title = "Does Weather Have An Affect On System Use?", y = 'Trip Count')
+q
+q <-ggplot(data = weather_trip_data_merged, aes(x = month, y = `trip count`, color = mean.temp))+
+geom_jitter()+
+geom_smooth()+
+#scale_x_continuous("Day of the Month",breaks = c(1,5,10,15,20,25,30))+
+scale_color_distiller(type = 'seq',palette = 'RdBu',name = 'Mean Temp')+
+theme_dark()+
+labs(title = "Does Weather Have An Affect On System Use?", y = 'Trip Count')
+q
+q <-ggplot(data = weather_trip_data_merged, aes(x = month, y = `trip count`, color = mean.temp))+
+geom_jitter()+
+geom_smooth()+
+facet_wrap(~month)
+q
+q <-ggplot(data = weather_trip_data_merged, aes(y = `trip count`, color = mean.temp))+
+geom_jitter()+
+geom_smooth()+
+facet_wrap(~month)
+q
+q <-ggplot(data = weather_trip_data_merged, aes(y = `trip count`, color = mean.temp))+
+geom_bar()+
+geom_smooth()+
+facet_wrap(~month)
+q
+p
+p <-ggplot(data = weather_trip_data_merged, aes(x = day, y = `trip count`, color = mean.temp))+
+geom_point()+
+facet_wrap(~month)+
+scale_x_continuous("Day of the Month",breaks = c(1,5,10,15,20,25,30))+
+scale_color_distiller(type = 'seq',palette = 'RdBu',name = 'Mean Temp')+
+theme_dark()+
+labs(title = "Does Weather Have An Affect On System Use?", y = 'Trip Count')
+p
+p <-ggplot(data = weather_trip_data_merged, aes(x = mean.temp, y = `trip count`, color = mean.temp))+
+geom_point()+
+facet_wrap(~month)+
+scale_x_continuous("Day of the Month",breaks = c(1,5,10,15,20,25,30))+
+scale_color_distiller(type = 'seq',palette = 'RdBu',name = 'Mean Temp')+
+theme_dark()+
+labs(title = "Does Weather Have An Affect On System Use?", y = 'Trip Count')
+p
+p <-ggplot(data = weather_trip_data_merged, aes(x = mean.temp, y = `trip count`, color = mean.temp))+
+geom_point()+
+facet_wrap(~month)+
+#scale_x_continuous("Day of the Month",breaks = c(1,5,10,15,20,25,30))+
+scale_color_distiller(type = 'seq',palette = 'RdBu',name = 'Mean Temp')+
+theme_dark()+
+labs(title = "Does Weather Have An Affect On System Use?", y = 'Trip Count')
+p
+p <-ggplot(data = weather_trip_data_merged, aes(x = mean.temp, y = `trip count`, color = mean.temp))+
+geom_point()+
+geom_smooth()+
+facet_wrap(~month)+
+#scale_x_continuous("Day of the Month",breaks = c(1,5,10,15,20,25,30))+
+scale_color_distiller(type = 'seq',palette = 'RdBu',name = 'Mean Temp')+
+theme_dark()+
+labs(title = "Does Weather Have An Affect On System Use?", y = 'Trip Count')
+p
+p <-ggplot(data = weather_trip_data_merged, aes(x = mean.temp, y = `trip count`, color = mean.temp))+
+geom_point()+
+geom_smooth()+
+facet_wrap(~month)+
+scale_x_continuous("Mean Temperature",scale = "free_x")+
+scale_color_distiller(type = 'seq',palette = 'RdBu',name = 'Mean Temp')+
+theme_dark()+
+labs(title = "Does Weather Have An Affect On System Use?", y = 'Trip Count')
+p <-ggplot(data = weather_trip_data_merged, aes(x = mean.temp, y = `trip count`, color = mean.temp))+
+geom_point()+
+geom_smooth()+
+facet_wrap(~month,scales = 'free_x')+
+scale_x_continuous("Mean Temperature")+
+scale_color_distiller(type = 'seq',palette = 'RdBu',name = 'Mean Temp')+
+theme_dark()+
+labs(title = "Does Weather Have An Affect On System Use?", y = 'Trip Count')
+p
+p <-ggplot(data = weather_trip_data_merged, aes(x = mean.temp, y = `trip count`, color = mean.temp))+
+geom_point()+
+geom_smooth()+
+facet_wrap(~month,scales = 'free')+
+scale_x_continuous("Mean Temperature")+
+scale_color_distiller(type = 'seq',palette = 'RdBu',name = 'Mean Temp')+
+theme_dark()+
+labs(title = "Does Weather Have An Affect On System Use?", y = 'Trip Count')
+p
+p <-ggplot(data = weather_trip_data_merged, aes(x = mean.temp, y = `trip count`, color = mean.temp))+
+geom_point()+
+geom_smooth()+
+facet_wrap(~month,scales = 'free_x')+
+scale_x_continuous("Mean Temperature")+
+scale_color_distiller(type = 'seq',palette = 'RdBu',name = 'Mean Temp')+
+theme_dark()+
+labs(title = "Does Weather Have An Affect On System Use?", y = 'Trip Count')
+p
+p <-ggplot(data = weather_trip_data_merged, aes(x = mean.temp, y = `trip count`, color = mean.temp))+
+geom_point()+
+geom_smooth()+
+facet_wrap(~month,dir = 'v')+
+scale_x_continuous("Mean Temperature")+
+scale_color_distiller(type = 'seq',palette = 'RdBu',name = 'Mean Temp')+
+theme_dark()+
+labs(title = "Does Weather Have An Affect On System Use?", y = 'Trip Count')
+p
+p <-ggplot(data = weather_trip_data_merged, aes(x = mean.temp, y = `trip count`, color = mean.temp))+
+geom_point()+
+geom_smooth()+
+facet_wrap(~month,dir = 'h')+
+scale_x_continuous("Mean Temperature")+
+scale_color_distiller(type = 'seq',palette = 'RdBu',name = 'Mean Temp')+
+theme_dark()+
+labs(title = "Does Weather Have An Affect On System Use?", y = 'Trip Count')
+p
+p <-ggplot(data = weather_trip_data_merged, aes(x = mean.temp, y = `trip count`, color = mean.temp))+
+geom_point()+
+geom_smooth()+
+facet_wrap(~month)+
+scale_x_continuous("Mean Temperature")+
+scale_color_distiller(type = 'seq',palette = 'RdBu',name = 'Mean Temp')+
+theme_dark()+
+labs(title = "Does Weather Have An Affect On System Use?", y = 'Trip Count')
+p
+hist <- ggplot(trips_df_90th, aes(x = trip_duration)) +
+geom_histogram(fill = 'steelblue'
+hist
+attach(trips_df_90th)
+hist <- ggplot(trips_df_90th, aes(x = trip_duration)) +
+geom_histogram(fill = 'steelblue'
+,color = 'snow'
+,binwidth = 1
+,bins = length(unique(trips_df_90th$trip_duration)))+
+scale_fill_discrete(name = 'Subscriber Type')+
+theme_bw()+
+ggtitle(label = 'Frequency of Trip Duration(excluding outliers)')+
+scale_x_continuous(name = 'Trip Duration (minutes)', breaks = unique(trip_duration))+
+scale_y_continuous(name = 'Count',breaks = seq(0,60000,10000))
+detach(trips_df_90th)
+hist
+attach(trips_df_90th)
+hist <- ggplot(trips_df_90th, aes(x = trip_duration)) +
+geom_histogram(fill = 'steelblue'
+,color = 'snow'
+,binwidth = 1
+,bins = length(unique(trips_df_90th$trip_duration)))+
+scale_fill_discrete(name = 'Subscriber Type')+
+theme_classic()+
+ggtitle(label = 'Frequency of Trip Duration (excluding outliers)')+
+scale_x_continuous(name = 'Trip Duration (minutes)', breaks = unique(trip_duration))+
+scale_y_continuous(name = 'Count',breaks = seq(0,60000,10000))
+detach(trips_df_90th)
+hist
+,bins = length(unique(trips_df_90th$trip_duration)))+
+scale_fill_discrete(name = 'Subscriber Type')+
+theme_()+
+ggtitle(label = 'Frequency of Trip Duration (excluding outliers)')+
+scale_x_continuous(name = 'Trip Duration (minutes)', breaks = unique(trip_duration))+
+scale_y_continuous(name = 'Count',breaks = seq(0,60000,10000))
+attach(trips_df_90th)
+hist <- ggplot(trips_df_90th, aes(x = trip_duration)) +
+geom_histogram(fill = 'steelblue'
+,color = 'snow'
+,binwidth = 1
+,bins = length(unique(trips_df_90th$trip_duration)))+
+scale_fill_discrete(name = 'Subscriber Type')+
+theme_gray()+
+ggtitle(label = 'Frequency of Trip Duration (excluding outliers)')+
+scale_x_continuous(name = 'Trip Duration (minutes)', breaks = unique(trip_duration))+
+scale_y_continuous(name = 'Count',breaks = seq(0,60000,10000))
+detach(trips_df_90th)
+hist
+attach(trips_df_90th)
+hist <- ggplot(trips_df_90th, aes(x = trip_duration)) +
+geom_histogram(fill = 'steelblue'
+,color = 'snow'
+,binwidth = 1
+,bins = length(unique(trips_df_90th$trip_duration)))+
+scale_fill_discrete(name = 'Subscriber Type')+
+theme_classic()+
+ggtitle(label = 'Frequency of Trip Duration (excluding outliers)')+
+scale_x_continuous(name = 'Trip Duration (minutes)', breaks = unique(trip_duration))+
+scale_y_continuous(name = 'Count',breaks = seq(0,60000,10000))
+detach(trips_df_90th)
+hist
+attach(trips_df_90th)
+hist <- ggplot(trips_df_90th, aes(x = trip_duration)) +
+geom_histogram(fill = 'steelblue'
+,color = 'snow'
+,binwidth = 1
+,bins = length(unique(trips_df_90th$trip_duration)))+
+scale_fill_discrete(name = 'Subscriber Type')+
+theme_dark()+
+ggtitle(label = 'Frequency of Trip Duration (excluding outliers)')+
+scale_x_continuous(name = 'Trip Duration (minutes)', breaks = unique(trip_duration))+
+scale_y_continuous(name = 'Count',breaks = seq(0,60000,10000))
+detach(trips_df_90th)
+hist
+hist <- ggplot(trips_df_90th, aes(x = trip_duration)) +
+geom_histogram(fill = 'steelblue'
+,color = 'snow'
+,binwidth = 1
+,bins = length(unique(trips_df_90th$trip_duration)))
+hist
+View(subdata)
+trips.per.day <- data.frame(table(trips_df[,c("Start.Station","Subscriber.Type",'week.day')]))
+subdata <- trips.per.day[trips.per.day$Start.Station %in% top5.trip$`station name`,]
+View(subdata)
+kable(subdata,align = 'c',caption = 'System Use for Top Stations')
+subdata[sort(subdata$Start.Station),]
+kable(subdata[sort(subdata$Start.Station),],align = 'c',caption = 'System Use for Top Stations')
+kable(subdata[order(subdata$Start.Station),],align = 'c',caption = 'System Use for the Top 5 Stations')
+setwd("C:/workspace/UCB_R/lectures")

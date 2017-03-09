@@ -11,7 +11,7 @@
 R Files
 #########
 
-.Rhistory
-.Rapp.history
-.Rdata
-.tar.gz
+*.Rhistory
+*.Rapp.history
+*.Rdata
+*.tar.gz
