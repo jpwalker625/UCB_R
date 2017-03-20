@@ -1,0 +1,52 @@
+---
+title: "R Notebook"
+output:
+  html_document: default
+  html_notebook: default
+---
+
+Lecture 6
+```{r setup, include=TRUE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+```{r Problem 1}
+
+library(leaflet)
+
+wells <- read.csv("wells.tsv", header = TRUE, sep = '\t')
+
+m <- wells %>%
+  leaflet() %>%
+  addTiles() %>%
+  addCircles(fillColor = wells$GS_ELEVATION,radius = wells$GS_ELEVATION, label = paste0(wells$SITE_CODE))
+m
+```
+
+```{r Problem 2}
+library(tidyverse)
+
+est <- diamonds %>%
+  filter(carat == '3.5' | carat == '4') %>%
+    summarise(mean = mean(price))
+
+est_2 <- diamonds %>%
+  filter(between(carat, 3.5, 4)) 
+
+p <- ggplot(est_2, aes(carat, price)) +
+  geom_point()
+p
+
+```
+
+```{r rvest package}
+
+library(rvest)
+
+best_picture <- read_html("http://www.imdb.com/title/tt4975722/") %>%
+  html_node('strong span') %>%
+  html_text() %>%
+  as.numeric
+  
+best_picture
+
+```
