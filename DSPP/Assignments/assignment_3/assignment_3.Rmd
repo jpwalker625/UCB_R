@@ -1,0 +1,67 @@
+---
+title: "Assignment_3"
+author: "Joseph Walker"
+date: "3/19/2017"
+output: 
+  html_document: 
+    toc: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+###Problem 1
+The U.S. Government Department of Labor, Bureau of Labor Statistics (BLS) publishes a Local Area
+Unemployent Report, overview available here:
+https://www.bls.gov/lau/lauov.htm
+Data format description here:
+https://www.bls.gov/help/hlpforma.htm#LA
+A file named sf_oak_metro.csv in the Canvas Files, Assignment 3 folder has local area unemployment
+statistics for the San Francisco-Oakland-Hayward California Metropolitan Statistical Area (MSA) for
+the years 1990 - 2016.
+Assignment:
+From the dataset above, use tidyverse packages to generate an HTML file from RMarkdown with four
+separate ggplot line plots (including points) of the following:
+1. Employment (numbers)
+2. Labor Force (numbers)
+3. Unemploment Rate (rate)
+4. Unemployment (numbers)
+with:
+• The above values on the Y axis (may be labeled simply "value")
+• Month abbreviations (Jan, Feb, ... Dec) on the X axis
+• Showing the values for the years 1990 - 2016 on each plot indicated by color (include a legend
+showing color for each year)
+• Each plot identified with a title bar or title caption similar to the above wording, for example,
+"Employment: San Francisco-Oakland-Hayward CA Metropolitical Statistical Area"
+• A brief description of the problem from the above so that a reader can understand your report.
+
+
+```{r sf_oak_metro data}
+#load packages
+library(tidyverse)
+library(forcats)
+library(lubridate)
+
+#read in data
+df<- read_csv("sf_oak_metro.csv", col_names = T)
+
+
+#06 Labor force,
+#05 Employment,
+#04 Unemployment, and
+#03 Unemployment rate.
+
+#tidy Data
+sf_oak <- gather(df, Date, Value, 2:325)
+sf_oak$`Series ID` <- sf_oak$`Series ID` %>% 
+                      fct_recode(unemployment_rate = "LAUMT064186000000003",
+                                 unemployment = "LAUMT064186000000004",
+                                 employment = "LAUMT064186000000005",
+                                 labor_force = "LAUMT064186000000006")
+sf_oak$Date <- parse_date_time2(sf_oak$Date, '%b! %Y!')
+sf_oak$month <- month(sf_oak$Date)
+sf_oak$year <- year(sf_oak$Date)
+
+```
+
