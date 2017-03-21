@@ -8,7 +8,7 @@ output:
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = TRUE, warning = F, message = F)
 ```
 
 ###Problem 1
@@ -42,6 +42,7 @@ showing color for each year)
 library(tidyverse)
 library(forcats)
 library(lubridate)
+library(viridis)
 
 #read in data
 df<- read_csv("sf_oak_metro.csv", col_names = T)
@@ -54,14 +55,62 @@ df<- read_csv("sf_oak_metro.csv", col_names = T)
 
 #tidy Data
 sf_oak <- gather(df, Date, Value, 2:325)
-sf_oak$`Series ID` <- sf_oak$`Series ID` %>% 
+
+#uniform column names (lower case)
+colnames(sf_oak) <- colnames(sf_oak) %>% tolower()
+
+sf_oak$`series id` <- sf_oak$`series id` %>% 
                       fct_recode(unemployment_rate = "LAUMT064186000000003",
                                  unemployment = "LAUMT064186000000004",
                                  employment = "LAUMT064186000000005",
                                  labor_force = "LAUMT064186000000006")
-sf_oak$Date <- parse_date_time2(sf_oak$Date, '%b! %Y!')
-sf_oak$month <- month(sf_oak$Date)
-sf_oak$year <- year(sf_oak$Date)
+
+
+sf_oak$date <- parse_date_time2(sf_oak$date, '%b! %Y!')
+#sf_oak$value <- as.integer(sf_oak$value)
+sf_oak$month <- month(sf_oak$date,label = TRUE)
+sf_oak$year <- as.factor(year(sf_oak$date))
+
+sf_oak %>%
+  filter(`series id` == 'employment') %>%
+  ggplot(aes(month, value, group = year, colour = year)) +
+  geom_point() +
+  geom_line() +
+  ggtitle(label = 'Monthly Employment Statistics for the San Francisco-Oakland-Hayward Metropolitan Area', 
+          subtitle = '1990-2016') +
+  theme(plot.title = element_text(size = 10, face = 'bold'),
+        plot.subtitle = element_text(size = 10))
+
+
+sf_oak %>%
+  filter(`series id` == 'labor_force') %>%
+  ggplot(aes(month, value, group = year, colour = year)) +
+  geom_point() +
+  geom_line() +
+  ggtitle(label = 'Monthly Labor Force Statistics for the San Francisco-Oakland-Hayward Metropolitan Area', 
+          subtitle = '1990-2016') +
+  theme(plot.title = element_text(size = 10, face = 'bold'),
+        plot.subtitle = element_text(size = 10))
+
+sf_oak %>%
+  filter(`series id` == 'unemployment') %>%
+  ggplot(aes(month, value, group = year, colour = year)) +
+  geom_point() +
+  geom_line() +
+  ggtitle(label = 'Monthly Unemployment Statistics for the San Francisco-Oakland-Hayward Metropolitan Area', 
+          subtitle = '1990-2016') +
+  theme(plot.title = element_text(size = 10, face = 'bold'),
+        plot.subtitle = element_text(size = 10))
+
+sf_oak %>%
+  filter(`series id` == 'unemployment_rate') %>%
+  ggplot(aes(month, value, group = year, colour = year)) +
+  geom_point() +
+  geom_line() +
+  ggtitle(label = 'Monthly Unemployment Rate Statistics for the San Francisco-Oakland-Hayward Metropolitan Area', 
+          subtitle = '1990-2016') +
+  theme(plot.title = element_text(size = 10, face = 'bold'),
+        plot.subtitle = element_text(size = 10))
 
 ```
 
