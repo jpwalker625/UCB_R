@@ -14,27 +14,22 @@ knitr::opts_chunk$set(echo = TRUE, warning = F, message = F)
 ###Problem 1
 The U.S. Government Department of Labor, Bureau of Labor Statistics (BLS) publishes a Local Area
 Unemployent Report, overview available here:
-https://www.bls.gov/lau/lauov.htm
+
+* https://www.bls.gov/lau/lauov.htm
+
 Data format description here:
-https://www.bls.gov/help/hlpforma.htm#LA
-A file named sf_oak_metro.csv in the Canvas Files, Assignment 3 folder has local area unemployment
-statistics for the San Francisco-Oakland-Hayward California Metropolitan Statistical Area (MSA) for
-the years 1990 - 2016.
+
+* https://www.bls.gov/help/hlpforma.htm#LA
+
+
 Assignment:
-From the dataset above, use tidyverse packages to generate an HTML file from RMarkdown with four
-separate ggplot line plots (including points) of the following:
-1. Employment (numbers)
-2. Labor Force (numbers)
-3. Unemploment Rate (rate)
-4. Unemployment (numbers)
-with:
-• The above values on the Y axis (may be labeled simply "value")
-• Month abbreviations (Jan, Feb, ... Dec) on the X axis
-• Showing the values for the years 1990 - 2016 on each plot indicated by color (include a legend
-showing color for each year)
-• Each plot identified with a title bar or title caption similar to the above wording, for example,
-"Employment: San Francisco-Oakland-Hayward CA Metropolitical Statistical Area"
-• A brief description of the problem from the above so that a reader can understand your report.
+Tidy the data set provided and generate four separate ggplot line plots (including points) of the following:
+
+1. Employment
+2. Labor Force
+3. Unemploment Rate
+4. Unemployment
+
 
 
 ```{r sf_oak_metro data}
@@ -42,8 +37,8 @@ showing color for each year)
 library(tidyverse)
 library(forcats)
 library(lubridate)
-library(viridis)
-
+library(pals)
+library(Polychrome)
 #read in data
 df<- read_csv("sf_oak_metro.csv", col_names = T)
 
@@ -54,7 +49,7 @@ df<- read_csv("sf_oak_metro.csv", col_names = T)
 #03 Unemployment rate.
 
 #tidy Data
-sf_oak <- gather(df, Date, Value, 2:325)
+sf_oak <- gather(df, Date, Value, -`Series ID`)
 
 #uniform column names (lower case)
 colnames(sf_oak) <- colnames(sf_oak) %>% tolower()
