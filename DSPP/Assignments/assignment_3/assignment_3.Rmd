@@ -8,7 +8,7 @@ output:
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE, warning = F, message = F)
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
 ```
 
 ###Problem 1
@@ -37,23 +37,19 @@ Tidy the data set provided and generate four separate ggplot line plots (includi
 library(tidyverse)
 library(forcats)
 library(lubridate)
-library(pals)
-library(Polychrome)
+
 #read in data
 df<- read_csv("sf_oak_metro.csv", col_names = T)
-
-
-#06 Labor force,
-#05 Employment,
-#04 Unemployment, and
-#03 Unemployment rate.
 
 #tidy Data
 sf_oak <- gather(df, Date, Value, -`Series ID`)
 
+glimpse(sf_oak)
+
 #uniform column names (lower case)
 colnames(sf_oak) <- colnames(sf_oak) %>% tolower()
 
+#rename the factors
 sf_oak$`series id` <- sf_oak$`series id` %>% 
                       fct_recode(unemployment_rate = "LAUMT064186000000003",
                                  unemployment = "LAUMT064186000000004",
@@ -61,8 +57,8 @@ sf_oak$`series id` <- sf_oak$`series id` %>%
                                  labor_force = "LAUMT064186000000006")
 
 
+#parse date variable with lubridate functions
 sf_oak$date <- parse_date_time2(sf_oak$date, '%b! %Y!')
-#sf_oak$value <- as.integer(sf_oak$value)
 sf_oak$month <- month(sf_oak$date,label = TRUE)
 sf_oak$year <- as.factor(year(sf_oak$date))
 
@@ -109,3 +105,9 @@ sf_oak %>%
 
 ```
 
+###Problem 2
+
+```{rproblem 2}
+
+
+```
