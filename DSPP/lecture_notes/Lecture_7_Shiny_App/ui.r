@@ -13,4 +13,3 @@ shinyUI(fluidPage(
     textOutput("Diamonds_Data"),
     plotOutput("ShowMeAPlot")
     ))))
-slider
