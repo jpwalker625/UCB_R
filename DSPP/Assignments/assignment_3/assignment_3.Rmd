@@ -37,6 +37,8 @@ Tidy the data set provided and generate four separate ggplot line plots (includi
 library(tidyverse)
 library(forcats)
 library(lubridate)
+library(jsonlite)
+library(tidyjson)
 
 #read in data
 df<- read_csv("sf_oak_metro.csv", col_names = T)
@@ -107,7 +109,19 @@ sf_oak %>%
 
 ###Problem 2
 
-```{rproblem 2}
+```{r problem 2}
+json <- do.call(rbind,
+lapply(paste(readLines("gz_2010_us_050_00_20m.json", warn=FALSE),
+collapse=""),
+jsonlite::fromJSON))
 
+df <- as.data.frame(df$features)
+
+stream_in(file('gz_2010_us_050_00_20m.json'))
+fromJSON("gz_2010_us_050_00_20m.json",simplifyDataFrame = T)
+json <- read_lines_raw("gz_2010_us_050_00_20m.json")
+
+"usa_county_map.txt" %>% gather_array()
+json %>% gather_array()
 
 ```
