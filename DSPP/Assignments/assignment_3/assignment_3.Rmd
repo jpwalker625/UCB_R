@@ -7,8 +7,17 @@ output:
     toc: yes
 ---
 
-```{r setup, include=FALSE}
+```{r setup, include = TRUE}
 knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+#load packages
+library(tidyverse)
+library(forcats)
+library(lubridate)
+library(rgdal)
+library(leaflet)
+library(sp)
+library(pals)
+library(htmltools)
 ```
 
 ###Problem 1
@@ -33,12 +42,7 @@ Tidy the data set provided and generate four separate ggplot line plots (includi
 
 
 ```{r sf_oak_metro data}
-#load packages
-library(tidyverse)
-library(forcats)
-library(lubridate)
-library(jsonlite)
-library(tidyjson)
+
 
 #read in data
 df<- read_csv("sf_oak_metro.csv", col_names = T)
@@ -100,28 +104,67 @@ sf_oak %>%
   ggplot(aes(month, value, group = year, colour = year)) +
   geom_point() +
   geom_line() +
-  ggtitle(label = 'Monthly Unemployment Rate Statistics for the San Francisco-Oakland-Hayward Metropolitan Area', 
-          subtitle = '1990-2016') +
+  ggtitle(label = 'Monthly Unemployment Rate Statistics for the San Francisco-Oakland-Hayward Metropolitan Area',
+  subtitle = '1990-2016') +
   theme(plot.title = element_text(size = 10, face = 'bold'),
-        plot.subtitle = element_text(size = 10))
+  plot.subtitle = element_text(size = 10))
 
 ```
 
 ###Problem 2
 
 ```{r problem 2}
-json <- do.call(rbind,
-lapply(paste(readLines("gz_2010_us_050_00_20m.json", warn=FALSE),
-collapse=""),
-jsonlite::fromJSON))
 
-df <- as.data.frame(df$features)
+usa.counties.mapping <- readOGR("gz_2010_us_050_00_20m.json")
+class(usa.counties.mapping)
 
-stream_in(file('gz_2010_us_050_00_20m.json'))
-fromJSON("gz_2010_us_050_00_20m.json",simplifyDataFrame = T)
-json <- read_lines_raw("gz_2010_us_050_00_20m.json")
+cal.mapping <- usa.counties.mapping[usa.counties.mapping@data$STATE == '06', ]
 
-"usa_county_map.txt" %>% gather_array()
-json %>% gather_array()
+employment.stats <- read_tsv("california_counties_monthly_employment_2016.tsv", col_names = T) 
+glimpse(employment.stats)
 
+employment.stats$period <- parse_date_time(employment.stats$period, "%Y-%m-%d")
+employment.stats <- rename(employment.stats, county = area_title)
+#filter the data to contain only data for December
+employment.stats <- employment.stats %>%
+  filter(month(period) == 12)
+
+##we want to visaulize the unemployment rate data for month of december
+#map the data
+range(employment.stats$unemployed_rate)
+
+bins <- c(0, 2.7, 6, 9, 12, 15, 18, Inf)
+
+pal <- colorBin(palette = "BuPu", domain = employment.stats$unemployed_rate, bins = bins)
+
+labels <- sprintf("<strong>%s</strong><br/>%g%%", employment.stats$county, employment.stats$unemployed_rate) %>%
+  lapply(htmltools::HTML)
+
+
+
+counties.map <- leaflet(cal.mapping) %>%
+  addProviderTiles(provider = providers$CartoDB) %>%
+  addPolygons(fillColor = ~pal(employment.stats$unemployed_rate),
+              weight = 2,
+              opacity = 1,
+              color = "white",
+              dashArray = "3",
+              fillOpacity = .7,
+              highlight = highlightOptions(weight = 2,
+                               fillColor = 'silver',
+                               color = 'blue',
+                               fillOpacity = 0.7,
+                               bringToFront = TRUE),
+              label = labels,
+              labelOptions = labelOptions(style = list("font-weight" = "normal",
+                                                       padding = "3px 8px"),
+                                          textsize = "12px",
+                                          direction = "auto")) %>%
+  addLegend(position = 'topright', 
+            pal = pal, 
+            values = ~employment.stats$unemployed_rate,
+            title = 'Unemployment Rate',
+            opacity = 0.7)
+
+counties.map
 ```
