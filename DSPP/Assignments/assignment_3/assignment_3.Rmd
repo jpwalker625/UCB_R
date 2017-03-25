@@ -16,7 +16,6 @@ library(lubridate)
 library(rgdal)
 library(leaflet)
 library(sp)
-library(pals)
 library(htmltools)
 ```
 
@@ -118,33 +117,36 @@ sf_oak %>%
 usa.counties.mapping <- readOGR("gz_2010_us_050_00_20m.json")
 class(usa.counties.mapping)
 
-cal.mapping <- usa.counties.mapping[usa.counties.mapping@data$STATE == '06', ]
+usa.counties.mapping <- usa.counties.mapping[usa.counties.mapping@data$STATE == '06', ]
 
 employment.stats <- read_tsv("california_counties_monthly_employment_2016.tsv", col_names = T) 
 glimpse(employment.stats)
 
 employment.stats$period <- parse_date_time(employment.stats$period, "%Y-%m-%d")
-employment.stats <- rename(employment.stats, county = area_title)
+
 #filter the data to contain only data for December
 employment.stats <- employment.stats %>%
   filter(month(period) == 12)
+employment.stats$fips_county<- factor(employment.stats$fips_county)
+
+cal.mapping <- merge(usa.counties.mapping, employment.stats, by.x = 'COUNTY', by.y = 'fips_county')
+
 
 ##we want to visaulize the unemployment rate data for month of december
 #map the data
-range(employment.stats$unemployed_rate)
+range(cal.mapping$unemployed_rate)
 
 bins <- c(0, 2.7, 6, 9, 12, 15, 18, Inf)
 
-pal <- colorBin(palette = "BuPu", domain = employment.stats$unemployed_rate, bins = bins)
+pal <- colorBin(palette = topo.colors(7), domain = cal.mapping$unemployed_rate, bins = bins)
 
-labels <- sprintf("<strong>%s</strong><br/>%g%%", employment.stats$county, employment.stats$unemployed_rate) %>%
+labels <- sprintf("<strong>%s</strong><br/>%g%%", cal.mapping$NAME, cal.mapping$unemployed_rate) %>%
   lapply(htmltools::HTML)
-
 
 
 counties.map <- leaflet(cal.mapping) %>%
   addProviderTiles(provider = providers$CartoDB) %>%
-  addPolygons(fillColor = ~pal(employment.stats$unemployed_rate),
+  addPolygons(fillColor = ~pal(cal.mapping$unemployed_rate),
               weight = 2,
               opacity = 1,
               color = "white",
@@ -162,7 +164,7 @@ counties.map <- leaflet(cal.mapping) %>%
                                           direction = "auto")) %>%
   addLegend(position = 'topright', 
             pal = pal, 
-            values = ~employment.stats$unemployed_rate,
+            values = ~cal.mapping$unemployed_rate,
             title = 'Unemployment Rate',
             opacity = 0.7)
 
