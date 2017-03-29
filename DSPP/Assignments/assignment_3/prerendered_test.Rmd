@@ -1,13 +1,12 @@
 ---
-title: "Assignment_3"
+title: "pre_rednered test"
 author: "Joseph Walker"
 date: "3/19/2017"
 output: 
   html_document: 
     toc: yes
     toc_float: true
-    theme: flatly
-runtime: shiny
+runtime: shiny_prerendered
 ---
 
 ```{r setup, include = TRUE}
@@ -129,7 +128,7 @@ The file assignment2_problem2_data_files.zip contains two files:
 
 Create a leaflet choropleth map showing the unemployment rates (only, with legend) for all California counties for December 2016 in your HTML report, generated from RMarkdown
 
-```{r problem 2.1}
+```{r data problem 2.1}
 #Read in the geospatial polygon data using the function rgdal::readOGR()
 usa.counties.mapping <- readOGR(dsn = "gz_2010_us_050_00_20m.json",
                                 dropNULLGeometries = TRUE)
@@ -200,38 +199,34 @@ A Shiny app that allows the user to choose the month (in a dropdown) for which t
 
 * <https://tictacjoe.shinyapps.io/calcounties_app/>
 
-```{r Shiny, echo = FALSE}
+```{r UI, echo = FALSE}
+
+ui <- (fluidPage(
+  titlePanel("California Counties Employment Statistics - 2016"),
+  sidebarLayout(
+    sidebarPanel(
+      selectInput(inputId = "months", label = "select month", choices = sort(month(cal.merged$period, label = TRUE)
+      )# end of select input
+      )
+    ),#end of side bar panel
+    mainPanel(h3(textOutput('caption')),
+              leafletOutput('county.map'))
+  )))
+```
+
+```{r data}
 cal.merged <- sp::merge(cal.counties.mapping, 
                     employment.stats, by.x = "COUNTY", 
                     by.y = "fips_county", 
                     duplicateGeoms = TRUE)
+```
 
-ui <- navbarPage(title = "California Counties Employment - 2016", id = 'nav',
-              tabPanel('Interactive Map',
-      
-              leafletOutput('county.map'),
-        
-              absolutePanel(id = "controls", 
-                            fixed = TRUE, 
-                            draggable = TRUE, 
-                            top = 100, 
-                            left = 20, 
-                            right = "auto",
-                            bottom = "auto",
-                            width = "auto", 
-                            height = "auto",
-                            selectInput(inputId = "months", 
-                                        label = "select month", 
-                                        choices = sort(month(cal.merged$period, label = TRUE))
-                                        )# end of select input
-                            )#end of absolute panel
-              )# end of tab panel
-) #end of navbar page
+```{r server, echo = FALSE, context = "server"}
 
-###########################################
 
 server <- (function(input, output){
-
+  output$caption <- renderText("Employment Statistics for California Counties, 2016")
+  
   by.month <- reactive({cal.merged[month(cal.merged$period, label = TRUE) == input$months, ]
     })
   
@@ -286,6 +281,3 @@ server <- (function(input, output){
 
 shinyApp(ui = ui, server = server)
 ```
-
-
-

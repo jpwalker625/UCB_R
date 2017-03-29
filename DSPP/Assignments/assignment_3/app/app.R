@@ -1,39 +1,73 @@
+library(shiny)
 library(tidyverse)
+library(forcats)
 library(lubridate)
 library(rgdal)
-library(shiny)
 library(leaflet)
+library(sp)
 library(spdplyr)
 library(htmltools)
 
-usa.counties.mapping <- readOGR("gz_2010_us_050_00_20m.json")
+setwd("C:/workspace/UCB_R/DSPP/Assignments/assignment_3/app/")
+
+usa.counties.mapping <- readOGR("data/gz_2010_us_050_00_20m.json")
 
 cal.counties.mapping <- usa.counties.mapping[usa.counties.mapping@data$STATE == '06', ]
 
-employment.stats <- read_tsv("california_counties_monthly_employment_2016.tsv", col_names = T) 
+employment.stats <- read_tsv("data/california_counties_monthly_employment_2016.tsv", col_names = T) 
 
 employment.stats$period <- parse_date_time(employment.stats$period, "%Y-%m-%d")
 
 employment.stats$fips_county<- factor(employment.stats$fips_county)
 
-cal.merged <- merge(cal.counties.mapping, employment.stats, by.x = "COUNTY", by.y = "fips_county", duplicateGeoms = TRUE)
+cal.merged <- sp::merge(cal.counties.mapping, 
+                    employment.stats, by.x = "COUNTY", 
+                    by.y = "fips_county",
+                    duplicateGeoms = TRUE)
 
-bins <- c(0, 2.7, 6, 9, 12, 15, 18, 21, 24, 27, Inf)
 
+################################################################
 
-shinyServer(function(input, output){
+ui <- navbarPage(title = "California Counties Employment - 2016", id = 'nav',
+                 tabPanel('Interactive Map',
+                          
+                          leafletOutput('county.map', 
+                                        width = "800px", 
+                                        height = "800px"),
+                          
+                          absolutePanel(id = "controls", 
+                                        fixed = TRUE, 
+                                        draggable = TRUE, 
+                                        top = 100, 
+                                        left = 20, 
+                                        right = "auto",
+                                        bottom = "auto",
+                                        width = "auto", 
+                                        height = "auto",
+                                        selectInput(inputId = "months", 
+                                                    label = "select month", 
+                                                    choices = sort(month(cal.merged$period, label = TRUE))
+                                        )# end of select input
+                          )#end of absolute panel
+                 )# end of tab panel
+) #end of navbar page
+
+################################################################
+
+server <- (function(input, output){
+ 
   by.month <- reactive({cal.merged[month(cal.merged$period, label = TRUE) == input$months, ]
     })
   
     output$county.map <- renderLeaflet({
-      leaflet(cal.merged) %>%
+      leaflet(data = cal.merged) %>%
         addProviderTiles(provider = providers$OpenStreetMap.France) %>%
         setMaxBounds(lng1 = -125, lat1 = 31, lng2 = -113, lat2 = 43) %>%
-        setView(lng = -119.417931, lat = 36.778259, zoom = 5)
+        setView(lng = -119.417931, lat = 36.778259, zoom = 6)
       })
     observe({
       
-      pal <- colorBin(reverse = TRUE, palette = 'RdBu', domain = by.month()$unemployed_rate, bins = bins, pretty = TRUE)
+      pal <- colorBin(reverse = TRUE, palette = 'RdYlBu', domain = by.month()$unemployed_rate, pretty = TRUE)
       
       labels <- paste(by.month()$NAME,': ', by.month()$unemployed_rate, '%')
       
@@ -73,5 +107,6 @@ shinyServer(function(input, output){
   
     })
 })
-  
+
+shinyApp(ui = ui, server = server)
   
