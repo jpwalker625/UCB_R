@@ -3,6 +3,14 @@
 #Defined Variables accessible to both UI and Server
 source("global.r", local = FALSE)
 
+#Choices for 'statistic' drop down
+
+vars <- c("employed" = "employed",
+          "labor force" = "labor_force",
+          "unemployed" = "unemployed",
+          "unemployed rate" = "unemployed_rate")
+          
+
 navbarPage(title = "California Counties Employment - 2016", id = 'nav',
            tabPanel('Interactive Map',
                     
@@ -20,9 +28,14 @@ navbarPage(title = "California Counties Employment - 2016", id = 'nav',
                                   width = "auto", 
                                   height = "auto",
                                   selectInput(inputId = "months", 
-                                              label = "select month", 
+                                              label = "Select Month", 
                                               choices = sort(month(cal.merged$period, label = TRUE))
-                                  )# end of select input
+                                  ),# end of select input
+                                  
+                                  selectInput(inputId = 'statistic',
+                                              label = 'Select Statistic',
+                                              choices = vars
+                                  )
                     ) #end of absolute panel
            ), # End of tab panel 1
            
