@@ -1,15 +1,7 @@
 #UI side of the app
 
 #Defined Variables accessible to both UI and Server
-source("global.r", local = FALSE)
-
-#Choices for 'statistic' drop down
-
-vars <- c("employed" = "employed",
-          "labor force" = "labor_force",
-          "unemployed" = "unemployed",
-          "unemployed rate" = "unemployed_rate")
-          
+source("global.r")
 
 navbarPage(title = "California Counties Employment - 2016", id = 'nav',
            tabPanel('Interactive Map',
@@ -21,27 +13,34 @@ navbarPage(title = "California Counties Employment - 2016", id = 'nav',
                     absolutePanel(id = "controls", 
                                   fixed = TRUE, 
                                   draggable = TRUE, 
-                                  top = 100, 
+                                  top = "auto", 
                                   left = 20, 
                                   right = "auto",
-                                  bottom = "auto",
+                                  bottom = 100,
                                   width = "auto", 
                                   height = "auto",
-                                  selectInput(inputId = "months", 
-                                              label = "Select Month", 
-                                              choices = sort(month(cal.merged$period, label = TRUE))
-                                  ),# end of select input
-                                  
                                   selectInput(inputId = "statistic",
                                               label = 'Select Statistic',
-                                              choices = vars
-                                  )
-                    ) #end of absolute panel
+                                              choices = c("employed",
+                                                          "labor_force",
+                                                          "unemployed", 
+                                                          "unemployed_rate")
+                                              ),
+                                  
+                                  selectInput(inputId = "months", 
+                                              label = "Select Month", 
+                                              choices = sort(cal.merged$period) 
+                                              ),
+                                  
+                                  checkboxInput(inputId = "legend",
+                                                label = "Show Legend",
+                                                value = FALSE)
+                                  ) #end of absolute panel
            ), # End of tab panel 1
            
            tabPanel('Data',
                     
-                    plotOutput('plot')
+                    dataTableOutput('data.table')
                     )# end of tab panel 2
 ) #end of navbar page
 

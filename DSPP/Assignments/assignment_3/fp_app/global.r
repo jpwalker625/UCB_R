@@ -18,7 +18,7 @@ fix_column_names <- function(x){
   s <- gsub("(.)([A-Z][a-z]+)", "\\1_\\2", s) # separate with underscores on capitalization
   s <- tolower(gsub("([a-z0-9])([A-Z])", "\\1_\\2", s)) # lowercase
   s <- gsub("__", "_", s) # double underscore to single underscore
-  s <- gsub("^[_, .]", "", s) # delete first char underscore "_" or period "."
+  s <- gsub("^[_, .]", " ", s, fixed = TRUE) # delete first char underscore "_" or period "."
   s <- gsub(' ', '', s) # remove spaces
 }
 
@@ -29,6 +29,7 @@ colnames(usa.counties.mapping@data) <- fix_column_names(colnames(usa.counties.ma
 cal.counties.mapping <- usa.counties.mapping[usa.counties.mapping@data$state == '06', ]
 
 employment.stats <- read_tsv("data/california_counties_monthly_employment_2016.tsv", col_names = T) 
+colnames(employment.stats) <- fix_column_names((colnames(employment.stats)))
 
 employment.stats$period <- parse_date_time(employment.stats$period, "%Y-%m-%d")
 
@@ -38,3 +39,5 @@ cal.merged <- sp::merge(cal.counties.mapping,
                         employment.stats, by.x = "county", 
                         by.y = "fips_county",
                         duplicateGeoms = TRUE)
+
+cal.merged$period <- month(cal.merged$period, label = TRUE)

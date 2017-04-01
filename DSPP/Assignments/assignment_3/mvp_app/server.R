@@ -16,7 +16,7 @@ function(input, output){
     
     pal <- colorBin(reverse = TRUE, palette = 'RdYlBu', domain = by.month()$unemployed_rate, pretty = TRUE)
     
-    labels <- paste(by.month()$name,': ', by.month()$unemployed_rate, '%')
+    labels <- paste(by.month()$name,':', by.month()$unemployed_rate, '%')
     
     leafletProxy('county.map', data = by.month()) %>%
       clearShapes() %>%

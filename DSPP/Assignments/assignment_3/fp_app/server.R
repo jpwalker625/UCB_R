@@ -1,20 +1,26 @@
 #Server Side of the app
-
+library(pals)
 
 function(input, output){
-  
-  by.month <- reactive({cal.merged[month(cal.merged$period, label = TRUE) == input$months, ]
+
+  #############################  
+  ### Tab - Interactive Map ###
+
+  by.month <- reactive({cal.merged[cal.merged$period == input$months, ]
+  })
+    
+  by.stat <- reactive({
+    switch(input$statistic,
+             "employed" = by.month()$employed,
+             "labor_force" = by.month()$labor_force,
+             "unemployed" = by.month()$unemployed,
+             "unemployed_rate" = by.month()$unemployed_rate
+         )
   })
   
-  selected.data <- reactive({
-    
-    stats <- switch(input$statistic,
-                    "employed" = by.month[ , c('name', 'period','employed')],
-                    "labor force" = by.month,
-                    "unemployed" = by.month$unemployed,
-                    "uneployed rate" = by.month$unemployed_rate)
-    
-     })
+  my_colors <- reactive({
+    colorNumeric(palette = "RdYlBu", reverse = TRUE, domain = by.stat())
+  })
   
   output$county.map <- renderLeaflet({
     leaflet(data = cal.merged) %>%
@@ -24,17 +30,51 @@ function(input, output){
   }) #end of output$county.map
   
   observe({
+    pal <- my_colors()
+    
+    add_labels <- paste(by.month()$name,':', by.stat())
     
     leafletProxy('county.map', data = by.month()) %>%
       clearShapes() %>%
-      addPolygons(
-        highlight = highlightOptions(weight = 2,
+      addPolygons(fillColor = ~pal(by.stat()),
+                  weight = 2,
+                  opacity = 1,
+                  color = "white",
+                  dashArray = "3",
+                  fillOpacity = .7,
+                  highlight = highlightOptions(weight = 2,
                                                fillColor = 'silver',
                                                color = 'blue',
                                                fillOpacity = 0.7,
-                                               bringToFront = TRUE) 
-                  
+                                               bringToFront = TRUE),
+                  label = add_labels,
+                  labelOptions = labelOptions(
+                    style = list("font-weight" = "bold",
+                                 padding = "3px 8px"),
+                    textsize = "15px",
+                    direction = "auto")
                   )
+     
     })
+  
+  observe({
+    proxy <- leafletProxy("county.map", data = by.month())
 
-} #end of function
+    proxy %>% clearControls()
+    if (input$legend) {
+    proxy %>% addLegend(position = "topright",
+                        pal = my_colors(),
+                        opacity = .7,
+                        values = ~by.stat(),
+                        title = paste(input$statistic,'for', input$months)
+                        )
+      }
+    }) # End of Observe
+  
+##################  
+### Tab - Data ###
+  
+  output$data.table <- renderDataTable(data.frame(by.month()[ , c('name', 
+                                                                  'period', 
+                                                                  input$statistic)]))
+    } #end of function
