@@ -1,15 +1,13 @@
 ---
 title: "Assignment_3"
 author: "Joseph Walker"
-date: "3/19/2017"
+date: "`r Sys.Date()`"
 output:
   html_document:
+    highlight: textmate
     theme: flatly
     toc: yes
     toc_float: yes
-  html_notebook:
-    highlight: espresso
-    toc: yes
 ---
 
 ```{r setup, include = FALSE}
@@ -48,15 +46,15 @@ Tidy the data set provided and generate four separate ggplot line plots (includi
 4. Unemployment
 
 
-###Tidy the Data
+### Tidy the Data
 ```{r sf_oak_metro data}
 
 #read in data
 df<- read_csv("sf_oak_metro.csv", col_names = T)
-
+df
 #tidy Data
 sf_oak <- gather(df, Date, Value, -`Series ID`)
-
+sf_oak
 #uniform column names (lower case)
 colnames(sf_oak) <- colnames(sf_oak) %>% tolower()
 
@@ -76,9 +74,10 @@ sf_oak$year <- as.factor(year(sf_oak$date))
 glimpse(sf_oak)
 ```
 
-###Plot the Data
+###Plot the Data {.tabset .tabset-fade .tabset-pills}
 
-```{r Plots}
+#### Employment Statistics
+```{r employment plot}
 
 sf_oak %>%
   filter(`series id` == 'employment') %>%
@@ -89,8 +88,11 @@ sf_oak %>%
           subtitle = '1990-2016') +
   theme(plot.title = element_text(size = 10, face = 'bold'),
         plot.subtitle = element_text(size = 10))
+```
 
+#### Labor Force Statistics
 
+```{r labor force plot}
 sf_oak %>%
   filter(`series id` == 'labor_force') %>%
   ggplot(aes(month, value, group = year, colour = year)) +
@@ -100,7 +102,11 @@ sf_oak %>%
           subtitle = '1990-2016') +
   theme(plot.title = element_text(size = 10, face = 'bold'),
         plot.subtitle = element_text(size = 10))
+```
 
+#### Unemployment Statistics
+
+```{r unemployment plot}
 sf_oak %>%
   filter(`series id` == 'unemployment') %>%
   ggplot(aes(month, value, group = year, colour = year)) +
@@ -110,7 +116,11 @@ sf_oak %>%
           subtitle = '1990-2016') +
   theme(plot.title = element_text(size = 10, face = 'bold'),
         plot.subtitle = element_text(size = 10))
+```
 
+#### Unemployment Rate
+
+```{r unemployment rate plot}
 sf_oak %>%
   filter(`series id` == 'unemployment_rate') %>%
   ggplot(aes(month, value, group = year, colour = year)) +
@@ -123,14 +133,16 @@ sf_oak %>%
 
 ```
 
-###Problem 2 {.tabset .tabset-fade}
+### Problem 2 {.tabset .tabset-fade}
 
 The file assignment2_problem2_data_files.zip contains two files:
-* A geospatial polygon file of USA counties: 'gz_2010_us_050_00_20m.json'
-* a tsv file with monthy employment statistics for all California counties for 2016: california_counties_monthly_employment_2016.tsv
+
+* A geospatial polygon file of USA counties: `gz_2010_us_050_00_20m.json`
+
+* a tsv file with monthy employment statistics for all California counties for 2016: `california_counties_monthly_employment_2016.tsv`
 
 
-#### 2.1
+#### 2.1 - Choropleth Map
 
 Create a leaflet choropleth map showing the unemployment rates (only, with legend) for all California counties for December 2016 in your HTML report, generated from RMarkdown
 
@@ -200,12 +212,160 @@ counties.map
 ```
 
 
-#### 2.2
+#### 2.2 - Shiny App {.tabset .tabset-fade}
 
 A Shiny app that allows the user to choose the month (in a dropdown) for which to display the above choropleth map:
 
-* <https://tictacjoe.shinyapps.io/calcounties_app/>
+* <https://tictacjoe.shinyapps.io/cal_counties_choropleth_leaflet_app/>
 
+
+```{r shiny app}
+usa.counties.mapping <- readOGR(dsn = "gz_2010_us_050_00_20m.json")
+
+colnames(usa.counties.mapping@data) <- fix_column_names(colnames(usa.counties.mapping@data))
+
+cal.counties.mapping <- usa.counties.mapping[usa.counties.mapping@data$state == '06', ]
+
+employment.stats <- read_tsv("california_counties_monthly_employment_2016.tsv", col_names = T) 
+colnames(employment.stats) <- fix_column_names((colnames(employment.stats)))
+
+employment.stats$period <- parse_date_time(employment.stats$period, "%Y-%m-%d")
+
+employment.stats$fips_county<- factor(employment.stats$fips_county)
+
+cal.merged <- sp::merge(cal.counties.mapping, 
+                        employment.stats, by.x = "county", 
+                        by.y = "fips_county",
+                        duplicateGeoms = TRUE)
+
+cal.merged$period <- month(cal.merged$period, label = TRUE)
+
+shinyApp(
+ui <- navbarPage(title = "California Counties Employment - 2016", id = 'nav',
+           tabPanel('Interactive Map',
+                    
+                    leafletOutput('county.map', 
+                                  width = "800px", 
+                                  height = "800px"),
+                    
+                    absolutePanel(id = "controls", 
+                                  fixed = TRUE, 
+                                  draggable = TRUE, 
+                                  top = "auto", 
+                                  left = 20, 
+                                  right = "auto",
+                                  bottom = 100,
+                                  width = "auto", 
+                                  height = "auto",
+                                  selectInput(inputId = "statistic",
+                                              label = 'Select Statistic',
+                                              choices = c("employed",
+                                                          "labor_force",
+                                                          "unemployed", 
+                                                          "unemployed_rate")
+                                              ),
+                                  
+                                  selectInput(inputId = "months", 
+                                              label = "Select Month", 
+                                              choices = sort(cal.merged$period) 
+                                              ),
+                                  
+                                  checkboxInput(inputId = "legend",
+                                                label = "Show Legend",
+                                                value = FALSE)
+                                  ) #end of absolute panel
+           ), # End of tab panel 1
+           
+           tabPanel('Data',
+                    
+                    dataTableOutput('data.table')
+                    )# end of tab panel 2
+), #end of navbar page
+
+########################################
+
+function(input, output){
+
+  #############################  
+  ### Tab - Interactive Map ###
+
+  by.month <- reactive({cal.merged[cal.merged$period == input$months, ]
+  })
+    
+  by.stat <- reactive({
+    switch(input$statistic,
+             "employed" = by.month()$employed,
+             "labor_force" = by.month()$labor_force,
+             "unemployed" = by.month()$unemployed,
+             "unemployed_rate" = by.month()$unemployed_rate
+         )
+  })
+  
+  my_colors <- reactive({
+    colorNumeric(palette = "RdYlBu", reverse = TRUE, domain = by.stat())
+  })
+  
+  output$county.map <- renderLeaflet({
+    leaflet(data = cal.merged) %>%
+      addProviderTiles(provider = providers$OpenStreetMap.France) %>%
+      setMaxBounds(lng1 = -125, lat1 = 31, lng2 = -113, lat2 = 43) %>%
+      setView(lng = -119.417931, lat = 36.778259, zoom = 6)
+  }) #end of output$county.map
+  
+  observe({
+    pal <- my_colors()
+    
+    add_labels <- paste(by.month()$name,':', by.stat())
+    
+    leafletProxy('county.map', data = by.month()) %>%
+      clearShapes() %>%
+      addPolygons(fillColor = ~pal(by.stat()),
+                  weight = 2,
+                  opacity = 1,
+                  color = "white",
+                  dashArray = "3",
+                  fillOpacity = .7,
+                  highlight = highlightOptions(weight = 2,
+                                               fillColor = 'silver',
+                                               color = 'blue',
+                                               fillOpacity = 0.7,
+                                               bringToFront = TRUE),
+                  label = add_labels,
+                  labelOptions = labelOptions(
+                    style = list("font-weight" = "bold",
+                                 padding = "3px 8px"),
+                    textsize = "15px",
+                    direction = "auto")
+                  )
+     
+    })
+  
+  observe({
+    proxy <- leafletProxy("county.map", data = by.month())
+
+    proxy %>% clearControls()
+    if (input$legend) {
+    proxy %>% addLegend(position = "topright",
+                        pal = my_colors(),
+                        opacity = .7,
+                        values = ~by.stat(),
+                        title = paste(input$statistic,'for', input$months)
+                        )
+      }
+    }) # End of Observe
+  
+##################  
+### Tab - Data ###
+  
+  output$data.table <- renderDataTable(data.frame(by.month()[ , c('name', 
+                                                                  'period', 
+                                                                  input$statistic)]))
+    }, #end of function
+
+options = list(height = 1000)
+
+)
+```
 
 
 

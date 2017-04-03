@@ -1,0 +1,10 @@
+name: cal_counties_choropleth_leaflet_app
+title: Cal_Counties_Choropleth_Leaflet_App
+account: tictacjoe
+server: shinyapps.io
+appId: 169115
+bundleId: 774471
+url: https://tictacjoe.shinyapps.io/cal_counties_choropleth_leaflet_app/
+when: 1491197019.69549
+asMultiple: FALSE
+asStatic: FALSE

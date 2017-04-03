@@ -1,5 +1,4 @@
 #Server Side of the app
-library(pals)
 
 function(input, output){
 
