@@ -1,6 +1,6 @@
 ---
-title: "Assignment_3"
-author: "Joseph Walker"
+title: "Assignment 3"
+author: "Joseph Walker - jpwalker625@gmail.com"
 date: "`r Sys.Date()`"
 output:
   html_document:
@@ -10,8 +10,9 @@ output:
     toc_float: yes
 ---
 
-```{r setup, include = FALSE}
-knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
+```{r setup, include = TRUE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+
 #load packages
 library(shiny)
 library(tidyverse)
@@ -218,8 +219,23 @@ A Shiny app that allows the user to choose the month (in a dropdown) for which t
 
 * <https://tictacjoe.shinyapps.io/cal_counties_choropleth_leaflet_app/>
 
+See the UI and Server tabs for the respective code.
 
-```{r shiny app}
+##### UI.R
+```
+
+library(shiny)
+library(tidyverse)
+library(forcats)
+library(lubridate)
+library(rgdal)
+library(leaflet)
+library(sp)
+library(spdplyr)
+library(htmltools)
+
+#Read, Tidy, and Merge the Datasets
+
 usa.counties.mapping <- readOGR(dsn = "gz_2010_us_050_00_20m.json")
 
 colnames(usa.counties.mapping@data) <- fix_column_names(colnames(usa.counties.mapping@data))
@@ -240,8 +256,8 @@ cal.merged <- sp::merge(cal.counties.mapping,
 
 cal.merged$period <- month(cal.merged$period, label = TRUE)
 
-shinyApp(
-ui <- navbarPage(title = "California Counties Employment - 2016", id = 'nav',
+#UI.R
+navbarPage(title = "California Counties Employment - 2016", id = 'nav',
            tabPanel('Interactive Map',
                     
                     leafletOutput('county.map', 
@@ -280,9 +296,13 @@ ui <- navbarPage(title = "California Counties Employment - 2016", id = 'nav',
                     
                     dataTableOutput('data.table')
                     )# end of tab panel 2
-), #end of navbar page
+) #end of navbar page
+```
 
-########################################
+##### Server.R
+
+```
+#Server.R
 
 function(input, output){
 
@@ -360,13 +380,5 @@ function(input, output){
   output$data.table <- renderDataTable(data.frame(by.month()[ , c('name', 
                                                                   'period', 
                                                                   input$statistic)]))
-    }, #end of function
-
-options = list(height = 1000)
-
-)
+    } #end of function
 ```
-
-
-
-
