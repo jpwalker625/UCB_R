@@ -1,0 +1,34 @@
+---
+title: "Lecture 9 Notes"
+author: "Joseph Walker"
+date: "4/5/2017"
+output: html_document
+---
+
+```{r setup, include=TRUE}
+knitr::opts_chunk$set(echo = TRUE)
+library(modelr)
+library(tidyverse)
+```
+
+modelr is part of the tidyverse suite.
+
+Load it explicitly using library(modelr)
+
+From R4DS:
+
+> It’s important to understand that a fitted model is just the closest model from a family of models. That implies that you have the “best” model (according to some criteria); it doesn’t imply that you have a good model and it certainly doesn’t imply that the model is “true”. George Box puts this well in his famous aphorism: 
+
+> All models are wrong, but some are useful.
+
+
+```{r}
+model_matrix(iris, Sepal.Length ~ Species)
+
+length(mtcars$mpg)
+
+data_grid(data = mtcars, vs, am)
+
+ggplot(diamonds, aes(carat, price)) + geom_hex(bins = 50)
+
+```
