@@ -1,0 +1,157 @@
+---
+title: 'Final Exam Notes'
+output: html_notebook
+---
+
+## The Tidy Approach to Data Science
+
+Import 
+Tidy
+Explore
+> Transform
+  Visualise
+  Model
+  
+Communicate
+
+Four types of data sources:
+files (csv, xml, json, xls, geospatial data, images, etc..)
+local or remote databases
+Web Service via API
+
+
+Definition of a tidy data set:
+
+* Each variable has its own column
+* Each observation must have its own row
+* Each value must have its own cell
+
+What is the advantage of tidy data?
+
+* Defines a standard format on which functions (dplyr verbs) may operate
+* Lends itself to R's vectorized operations
+* This format allows you to focus on asking questions about the data 
+rather than fighting to get the data into the right form for different functions.
+
+Two packages for data visualization:
+GGPLOT2, 
+
+Aspects of Data Science:
+Includes traditional descriptive and inferential statistics
+emphasis on goal: explaining causation
+predictive analytics
+hypothesis testing
+statistical learning
+Big Data
+High Performance Computing Power
+Machine Learning
+Data Acquisition
+Data Exploration (visualization and interactivity via shiny)
+Modeling
+Reproducible Research
+
+Stages of A Data Science Project:
+Define the goal: what problems am I solving?
+What information do I need?
+Build Model
+Evaluate Model
+Present Results & Document
+Deploy Model
+Repeat
+
+
+## Dplyr for Data Wrangling
+Data wrangling includes tidying and transformation
+The basic idea here is to analyze data by applying functions representing analytical verbs to tidy data objects, and then feeding the results to other functions
+
+Piping with %>%
+
+```{r}
+library(dplyr)
+library(okcupiddata)
+
+data(profiles)
+
+glimpse(profiles)
+
+#Filter
+females <- profiles %>% filter(sex == "f")
+
+#arrange
+females <- females %>% arrange(age)
+
+males <- profiles %>% filter(sex == "m") %>%
+  arrange(age, desc(height))
+
+#Slice
+slice(males, 1:10)
+
+#return the first and last n() observation/row
+slice(males, c(1, n()))
+
+
+#select
+females %>% select(body_type, diet, drinks) %>%
+  top_n(10)
+
+females %>% select(starts_with('d'), starts_with('s')) %>%
+  slice(1:10)
+
+females %>% select(drinks_alocohol = drinks, ) %>%
+  colnames
+
+females %>% rename(career = job)
+
+iris %>% group_by(Species) %>%
+mutate_at(vars(Petal.Width, Sepal.Width), funs(min, max))
+
+mtcars %>% select(hp) %>%
+   mutate(model = row.names(),
+     ranking = cut(hp, c(0, 100, 150, Inf), c("low", "medium", "high")))
+```
+
+Tidyr for gathering, spreading, separating and uniting data
+
+```{r Tidyr}
+############Wide vs. Long Format
+library(tidyr)
+
+scores <- data.frame(id = 1:6,
+                     group_id = c(1311, 2347, 1311, 1311, 2347, 6232), 
+                     exam1    = c(67, 62, 74, 60, 70, 73),
+                     exam2    = c(77, 77, 71, 81, 73, 72),
+                     exam3    = c(75, 67, 66, 75, 80, 76))
+
+
+widetolong.scores <- gather(scores, key = exam, value = score, ... = c(-1,-2)) 
+
+#be careful using spread... the data frame must have a column which uniquely identifies each row
+longtowide.scores <- spread(widetolong.scores, key = exam, value = score)
+
+#separate to separate parts of a column into two 
+df <- data.frame(dates  = sample(seq(as.Date('2000/01/01'), as.Date('2017/02/22'), by="day"), 10))
+
+df %>% separate(dates, c('year', 'month', 'day'))
+
+quakes %>% unite(location, c(lat, long), sep = ", ")
+```
+
+JSON - Java Script Object Notation
+
+The tidyjson package takes an alternate approach to structuring JSON data into tidy data.frames. Similar to tidyr, tidyjson builds a grammar for manipulating JSON into a tidy table structure. Tidyjson is based on the following principles:
+
+* Leverage other libraries for efficiently parsing JSON (jsonlite) 
+* Integrate with pipelines built on dplyr and the magrittr %>% operator 
+* Turn arbitrarily complex and nested JSON into tidy data.frames that can be joined later * Guarantee a deterministic data.frame column structure 
+*Naturally handle 'ragged' arrays and / or objects (varying lengths by document) 
+* Allow for extraction of data in values or key names Ensure edge cases are handled correctly (especially empty data)
+
+```{r JSON}
+library(tidyjson)
+moment <- read_json("moment.json")
+df <- moment %>% enter_object('days') %>% gather_array() %>% gather_keys() %>% json_types()
+
+```
+
+
+
