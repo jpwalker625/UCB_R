@@ -1,0 +1,13 @@
+---
+title: "Final Project"
+author: "Joseph Walker - jpwalker625@gmail.com"
+date: `r Sys.Date()`
+output: html_document
+---
+
+## Introduction
+
+**insert some info. about the history of the SFFD here**
+The San Francisco Fire Department receives thousands of calls per year related to the public safety of the community. As you can imagine, many of these calls are directly related to fire incidents. The following analysis focuses on these fire incidents and is part of a datset made available by SF Open Data; the city and county of San Francisco's open data portal.
+
+Please visit [SF OpenData](https://data.sfgov.org/) for more information and data.
