@@ -148,9 +148,20 @@ The tidyjson package takes an alternate approach to structuring JSON data into t
 
 ```{r JSON}
 library(tidyjson)
+library(jsonlite)
 moment <- read_json("moment.json")
-df <- moment %>% enter_object('days') %>% gather_array() %>% gather_keys() %>% json_types()
 
+df <- moment %>% 
+  enter_object('days') %>% 
+  gather_array() %>% 
+  spread_values(sessions = jstring('sessions'),
+                minuteCount = jnumber('minuteCount'),
+                pickupCount = jnumber('pickupCount'),
+                pickups = jstring('pickups')) %>%
+  enter_object('sessions') %>% 
+  gather_array() %>%
+  spread_values(location_accuracy = jnumber('locationAccuracyInMeters'))
+                                                                          
 ```
 
 
