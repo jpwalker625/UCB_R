@@ -110,7 +110,7 @@ mtcars %>% select(hp) %>%
      ranking = cut(hp, c(0, 100, 150, Inf), c("low", "medium", "high")))
 ```
 
-Tidyr for gathering, spreading, separating and uniting data
+## Tidyr for gathering, spreading, separating and uniting data
 
 ```{r Tidyr}
 ############Wide vs. Long Format
@@ -136,7 +136,7 @@ df %>% separate(dates, c('year', 'month', 'day'))
 quakes %>% unite(location, c(lat, long), sep = ", ")
 ```
 
-JSON - Java Script Object Notation
+## JSON - Java Script Object Notation
 
 The tidyjson package takes an alternate approach to structuring JSON data into tidy data.frames. Similar to tidyr, tidyjson builds a grammar for manipulating JSON into a tidy table structure. Tidyjson is based on the following principles:
 
@@ -149,20 +149,192 @@ The tidyjson package takes an alternate approach to structuring JSON data into t
 ```{r JSON}
 library(tidyjson)
 library(jsonlite)
+
 moment <- read_json("moment.json")
 
 df <- moment %>% 
   enter_object('days') %>% 
   gather_array() %>% 
-  spread_values(sessions = jstring('sessions'),
-                minuteCount = jnumber('minuteCount'),
+  spread_values(minuteCount = jnumber('minuteCount'),
                 pickupCount = jnumber('pickupCount'),
-                pickups = jstring('pickups')) %>%
-  enter_object('sessions') %>% 
+                date = jstring('date'),
+                sessions = jstring('sessions'),
+                pickups = jstring('pickups'),
+                appusages = jstring('appUsages'))
+  
+
+sessions <- moment %>%
+  enter_object('days') %>%
   gather_array() %>%
-  spread_values(location_accuracy = jnumber('locationAccuracyInMeters'))
-                                                                          
+  spread_values(minuteCount = jnumber('minuteCount'),
+                pickupCount = jnumber('pickupCount'),
+                date = jstring('date')) %>%
+  enter_object('sessions') %>% 
+  gather_array %>%
+  spread_values(location_accuracy_in_meters = jnumber("locationAccuracyInMeters"),
+                                             length_mins = jnumber("lengthInMinutes"),
+                                             lat = jnumber("latitude"),
+                                             long = jnumber("longitude"),
+                                             date_sessions = jstring("date"))
+
+pickups <- moment %>%
+  enter_object('days') %>%
+  gather_array() %>%
+  spread_values(minuteCount = jnumber('minuteCount'),
+                pickupCount = jnumber('pickupCount'),
+                date = jstring('date')) %>%
+  enter_object('pickups') %>% 
+  gather_array %>% 
+  spread_values(location_accuracy_in_meters = jnumber("locationAccuracyInMeters"),
+                long = jnumber("longitude"),
+                end_battery_level = jnumber("endingBatteryLevel"),
+                length_in_seconds = jnumber("lengthInSeconds"),
+                date_pickups = jstring("date"),
+                lat = jnumber("latitude"),
+                start_battery_level = jnumber("startingBatteryLevel"))
+
+
+app_usages <-  moment %>%
+  enter_object('days') %>%
+  gather_array() %>%
+  spread_values(minuteCount = jnumber('minuteCount'),
+                pickupCount = jnumber('pickupCount'),
+                date = jstring('date')) %>%
+  enter_object('appUsages') %>%
+  gather_array() %>%
+  spread_values(app_name = jstring("appName"),
+                on_screen = jnumber("onScreen"))
+
+```
+
+## leaflet for mapping
+javascript leaflet mapping library
+
+Two advantages in R:
+* You can access the power of leaflet, at a fairly high level, without knowing or using javascript
+* leaftlet mapping code is R code, so it seamlessly integrates with your R wrangling, visualizaiton, and modeling scripts
+
+```{r leaflet}
+library(leaflet)
+
+markers_df <- data.frame(lng = c(-122.260988, -122.268176, -122.2594134), lat = c(37.871824, 37.870111, 37.8707592), colors = c("red", "blue", "purple"))
+
+labs <- c("Campanile@#1 Public University in the US", "U.C. Berkeley Extension Golden Bear Building", "Sather Gate")
+
+m <- leaflet() %>%
+  addProviderTiles(provider = providers$Hydda) %>%
+  setView(lng = -122.2727, lat = 37.8716, zoom = 12) %>%
+  addCircleMarkers(data = markers_df, popup = labs, color = markers_df$colors) %>%
+  addLegend(position = "topright", labels = labs, colors = markers_df$colors)
+m
+```
+
+## Geospatial Data
+
+shapefiles
+points, lines, polygons
+ESRI - Environmental Systems Research Institute
+
+GEOJson
+
+Geometries
+consist of: a type and a collection of coordinates
+
+types:
+a point () - single coordinate
+LineStrings - minimum of two coordinates
+Polygons
+
+rgdal
+readOGR(dsn, layer)
+
+spdplyr
+library(spdplyr helpful for merging spatial dataframes with non-spatial dataframes)
+spmerge
+
+converting sp to Geojson is easy with geojsonio or rmapshaper
+geojson_json
+
+rmapshaper
+clip counties with ms_clip
+
+lawn
+View(lawn_bbox_polygon)
+
+in leaflet... addGeoJSON(geojson = insert_df_here)
+
+## Shiny
+
+ui.R
+
+```{r}
+library(shiny)
+ui <- shinyUI(fluidPage(
+  titlePanel(
+    sidebarLayout(
+      sidebarPanel(
+        sliderInput("bins",
+                     "Number of bins:",
+                     min = 1,
+                     max = 100,
+                     value = 30)
+      ),
+      mainPanel(
+        plotOutput("distPlot")
+      )
+    )
+  )
+))
+
+
+```
+server.R
+```{r server}
+server <- shinyServer(function(input,output){
+  output$distPlot <- renderPlot({
+    x <- faithful[, 2]
+    bins <- seq(min(x), max(x), length.out = input$bins + 1)
+    
+    hist(x, breaks = bins, col = 'steelblue', border = 'darkgray',main = "Histogram of Old Faithful Eruptions")
+  })
+})
+
+shinyApp(ui = ui, server = server)
+
+shiny::
 ```
 
 
+function	widget
+actionButton	Action Button
+checkboxGroupInput	A group of check boxes
+checkboxInput	A single check box
+dateInput	A calendar to aid date selection
+dateRangeInput	A pair of calendars for selecting a date range
+fileInput	A file upload control wizard
+helpText	Help text that can be added to an input form
+numericInput	A field to enter numbers
+radioButtons	A set of radio buttons
+selectInput	A box with choices to select from
+sliderInput	A slider bar
+submitButton	A submit button
+textInput	A field to enter text
 
+## reactivity
+
+selectInput("var"
+label = "choose variable",
+choices = c(insert choices here))
+selected = (default selection from choices above)
+
+switch(input$var
+choices go here)
+
+reactive({
+
+})
+
+observe({
+
+
+})
