@@ -332,7 +332,7 @@ Are there certain times of the day when I use my phone more often than others? T
 * afternoon
 * evening
 
-And then I will create a model to predict the likelihood of using my phone.
+And then I will create a model to predict my time usage based on the time of day.
 ```{r predicting phone use}
 
 #create function to assign time of day depending on hour
@@ -351,8 +351,34 @@ time_of_day <- function(x){
 pickups$time_of_day <- map_chr(.x = hour(pickups$date), .f = time_of_day)
 pickups$time_of_day <- factor(pickups$time_of_day)
 
-lmo <- lm(formula = length_in_minutes ~ time_of_day + weekdays, data = pickups)
 
-pickups %>% data_grid(time_of_day, weekdays) %>% add_predictions(lmo)
+levels(pickups$time_of_day)
 
+lmo <- function(x){lm(data = x, formula = length_in_minutes ~ weekdays * time_of_day)}
+
+rsquare(lmo(pickups), pickups)
+
+pickups %>%
+  add_residuals(lmo) %>%
+  ggplot(aes(x = length_in_minutes, y = resid))+
+  geom_point()
+
+
+# df.model <- pickups %>% 
+#   data_grid(weekdays,time_of_day, location) %>%
+#   add_predictions(lmo)
 ```
+
+
+# round latitude and longitude down to two decimal places in order to group the locations into broader areas
+
+pickups$longitude <- pickups$longitude %>% round(digits = 2)
+pickups$latitude <- pickups$latitude %>% round(digits = 2)
+
+pickups <- pickups %>%
+  mutate(location = str_c(longitude, latitude, sep = ", "))
+
+pickups$location <- factor(pickups$location)
+
+
+
