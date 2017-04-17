@@ -1,13 +1,358 @@
 ---
-title: "Final Project"
-author: "Joseph Walker - jpwalker625@gmail.com"
-date: `r Sys.Date()`
+title: "final_project"
+author: "Joseph Walker"
+date: "April 15, 2017"
 output: html_document
 ---
 
-## Introduction
+```{r global options, include=TRUE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
+library(tidyverse)
+library(tidyjson)
+library(jsonlite)
+library(purrr)
+library(lubridate)
+library(stringr)
+library(forcats)
+library(ggthemes)
+library(knitr)
+library(modelr)
+```
 
-**insert some info. about the history of the SFFD here**
-The San Francisco Fire Department receives thousands of calls per year related to the public safety of the community. As you can imagine, many of these calls are directly related to fire incidents. The following analysis focuses on these fire incidents and is part of a datset made available by SF Open Data; the city and county of San Francisco's open data portal.
+# Introduction - The Quantified Self
 
-Please visit [SF OpenData](https://data.sfgov.org/) for more information and data.
+Data is everywhere. From the transaction we make at the store, to the website we click on when we're browsing the internet. With the rise of smart phones in the past decade, this data is becoming more easily accessible and applicable to our daily lives. The small but powerful devices that fit neatly into our pocket can track where we are, what we eat, who we communicate with. You name it, there's an app for it. We truly are living in the age of the quantified self.
+
+More and more,I find myself distracted from the present by that shiny little screen. As I stop for a moment to take a look around, I notice everyone around me is also distracted by their phones.
+
+As I was listening to the radio one morning on my way to work, I heard a segment about an app that track's your phone usage. Moment, as the app is called, tracks how much you are using your smart phone each day. The website's slogan reads "Put down your phone and get back to your life". Immediately, I knew I had to try it out. After downloading the app, I read through the tutorial on how to use it. 
+
+Each morning when you wake up, and every evening before bed, all you have to do is take a screenshot of your phone's battery information. The moment app automatically detects the screenshots and does the rest.
+
+I decided to test it out for a month to see how much time I spend on my phone. The app even allows you to export your data in JSON format to explore for yourself. With that being said, I decided this would be a great opportunity to put my new found R skills to the test with data that I created myself!
+
+```{r Import Data}
+
+#import data
+moment <- tidyjson::read_json("moment.json")
+
+#tidy into dataframe
+df <- moment %>% 
+  enter_object('days') %>% 
+  gather_array() %>% 
+  spread_values(minuteCount = jnumber('minuteCount'),
+                pickupCount = jnumber('pickupCount'),
+                date = jstring('date'),
+                sessions = jstring('sessions'),
+                pickups = jstring('pickups'),
+                appusages = jstring('appUsages'))
+
+#spread nested columns
+sessions <- moment %>%
+  enter_object('days') %>%
+  gather_array() %>%
+  spread_values(minuteCount = jnumber('minuteCount'),
+                pickupCount = jnumber('pickupCount'),
+                date = jstring('date')) %>%
+  enter_object('sessions') %>% 
+  gather_array %>%
+  spread_values(location_accuracy_in_meters = jnumber("locationAccuracyInMeters"),
+                length_mins = jnumber("lengthInMinutes"),
+                lat = jnumber("latitude"),
+                long = jnumber("longitude"),
+                date_sessions = jstring("date"))
+
+
+app_usage <-  moment %>%
+  enter_object('days') %>%
+  gather_array() %>%
+  spread_values(date = jstring('date')) %>%
+  enter_object('appUsages') %>%
+  gather_array() %>%
+  spread_values(app_name = jstring("appName"),
+                on_screen = jnumber("onScreen"))
+
+pickups <- moment %>%
+  enter_object('days') %>%
+  gather_array() %>%
+  enter_object('pickups') %>% 
+  gather_array %>% 
+  spread_values(location_accuracy_in_meters = jnumber("locationAccuracyInMeters"),
+                longitude = jnumber("longitude"),
+                end_battery_level = jnumber("endingBatteryLevel"),
+                length_in_seconds = jnumber("lengthInSeconds"),
+                date = jstring("date"),
+                latitude = jnumber("latitude"),
+                start_battery_level = jnumber("startingBatteryLevel"))
+```
+
+# Pickups {.tabset}
+
+Let's explore how frequently I use my phone each day by diving into the pickups dataset.
+```{r pickups}
+
+pickups$date <- str_replace(pickups$date, "T", " ")
+pickups$date <- str_replace(pickups$date, "-07:00", "")
+
+
+pickups <- pickups %>% within({
+  date <- parse_date_time(date, "%Y-%m-%d %H:%M:S")
+  length_in_minutes <- length_in_seconds/60
+  month <- factor(month(date, label = TRUE, abbr = TRUE))
+  day <- factor(day(date))
+  weekdays <- factor(weekdays(date))
+  weekdays <- fct_relevel(weekdays, "Monday", "Tuesday", "Wednesday", 
+                           "Thursday", "Friday", "Saturday", "Sunday")
+})
+
+daily_pickups <- pickups %>%
+  group_by(month, day, weekdays) %>%
+  summarise(pickups = n(),
+            length_in_minutes = sum(length_in_minutes)) %>% 
+  ungroup
+
+#This index will allow me to arrange the dates in order when I plot them.
+daily_pickups <- daily_pickups %>%
+  mutate(row.index = seq(from = 1, to = length(pickups), by = 1))
+
+# avg. number of pickups per day
+avg.pickups <- mean(daily_pickups$pickups)
+```
+
+## Daily Usage {.tabset}
+
+### Pickups per Day
+```{r}
+#plot pickups by day
+daily_pickups %>% ggplot(aes(x = fct_reorder(interaction(month,day,sep = " - "),x = row.index), 
+                             y = pickups, group = day)) +
+  geom_point() +
+  geom_line(aes(group = month)) +
+  geom_line(y = avg.pickups, linetype = 3) +
+  labs(title = "Total Pickups per Day", 
+       subtitle = "dashed line = average pickups per day",
+       x = "Date",
+       y = "Pickups") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1, face = "bold"),
+        axis.text.y = element_text(face = "bold"),
+        axis.title = element_text(face = "bold"),
+        legend.title = element_text(face = "bold"))
+```
+
+
+###  Time Spent on Phone per Day
+```{r time spent - total}
+#calculate avg length of time spent on phone per day
+avg.time.per.day <- mean(daily_pickups$length_in_minutes)
+
+#calculate avergae time spent per pickup
+avg.time.per.pickup <- sum(daily_pickups$length_in_minutes)/sum(as.numeric(daily_pickups$pickups))
+
+#calculate average time spent per pickup, per day
+daily_pickups <- daily_pickups %>%
+  mutate(avg = length_in_minutes/pickups)
+
+daily_pickups %>% ggplot(aes(x = fct_reorder(interaction(month,day,sep = " - "),x = row.index),
+                             y = length_in_minutes, 
+                             group = day)) +
+  geom_point() +
+  geom_line(aes(group = month)) +
+  geom_line(y = avg.time.per.day, linetype = 3) +
+  labs(title = "Time Spent on Phone Each Day", 
+       subtitle = "Dashed Line = Average Length of Time Spent on Phone Over All Days",
+       x = "Date",
+       y = "Length (Minutes)") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1, face = "bold"),
+        axis.text.y = element_text(face = "bold"),
+        axis.title = element_text(face = "bold"),
+        legend.title = element_text(face = "bold"))
+
+```
+
+### Average per Pickup
+
+```{r Average Time per Pickup per Day}
+global.avg <- mean(daily_pickups$avg)
+
+daily_pickups %>% ggplot(aes(x = fct_reorder(interaction(month,day,sep = " - "),x = row.index),
+                             y = avg)) +
+  geom_point()+
+  geom_line(aes(group = month)) +
+  geom_line(y = global.avg, linetype = 3, aes(group = day)) +
+  labs(title = "Average Length of Time Spent on Phone per Pickup, per Day",
+       subtitle = "Dashed Line = Global Average",
+       x = "Date",
+       y = "Length (Minutes)") +
+   theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1, face = "bold"),
+        axis.text.y = element_text(face = "bold"),
+        axis.title = element_text(face = "bold"),
+        legend.title = element_text(face = "bold"))
+```
+
+
+## By Weekday {.tabset}
+
+### Pickups
+```{r pickups by weekday}
+#pickups by weekday
+pickups.by.weedkay <- daily_pickups %>%
+  group_by(weekdays) %>%
+summarise(pickups = sum(pickups))
+
+#avg. pickups by weekday
+avg_by_weekday <- daily_pickups %>%
+  group_by(weekdays) %>%
+  summarise(avg_pickups = mean(pickups),
+            avg_time = mean(length_in_minutes)) %>%
+  mutate(avg_per_pickup = avg_time/avg_pickups)
+
+pickups.by.weedkay%>%
+  ggplot(aes(x = weekdays, y = pickups)) +
+  geom_bar(stat= "identity", aes(fill = weekdays)) +
+  geom_point(data = avg_by_weekday, 
+             aes(x= weekdays, y = avg_pickups), 
+             shape = 23,
+             size = 2,
+             color = 'black',
+             fill = 'red') +
+  scale_y_continuous(breaks = c(0,25,50,75,100,125)) +
+  labs(title = "Total Number of Pickups Aggregated by Weekday", 
+       subtitle = "Red Diamonds denote Averages",
+       x = "Weekday", y = "Pickups") +
+  theme(axis.text.x = element_text(face = "bold"),
+        axis.text.y = element_text(face = "bold"),
+        axis.title = element_text(face = "bold"),
+        legend.title = element_text(face = "bold"))
+```
+
+
+
+### Time Spent
+```{r Time Spent per Weekday}
+
+avg_by_weekday %>% ggplot(aes( x = weekdays, y = avg_time, label = avg_per_pickup)) +
+  geom_bar(stat = "identity", aes(fill = weekdays)) +
+  geom_point(aes(y = avg_per_pickup)) +
+  labs(title = "Average Lengh of Time Spent on Phone per Weekday",
+       x = "Weekday",
+       y = "Length (Minutes)") +
+  theme(axis.text.x = element_text(face = "bold"),
+        axis.text.y = element_text(face = "bold"),
+        axis.title = element_text(face = "bold"),
+        legend.title = element_text(face = "bold"))
+
+```
+
+### Average Time per Pickup
+```{r Avg. time per pickup - weekdays}
+avg_by_weekday %>% ggplot( aes( x = weekdays, y = avg_per_pickup, fill = weekdays)) +
+  geom_bar(stat = "identity") +
+  labs(title = "Average Lengh of Each Pickup per Weekday",
+       x = "Weekdays",
+       y = "Length (Minutes") +
+  theme(axis.text.x = element_text(face = "bold"),
+        axis.text.y = element_text(face = "bold"),
+        axis.title = element_text(face = "bold"),
+        legend.title = element_text(face = "bold"))
+
+```
+
+# Apps {.tabset}
+
+Now, let's explore which Apps I use.
+
+```{r App Usage}
+
+glimpse(app_usage)
+
+app_usage <- app_usage %>% 
+  within({
+    date <- str_replace(string = date, 
+                              pattern = "T00:00:00-07:00",
+                              replace = "")
+    date <- parse_date_time(date, orders = "%Y-%m-%d")
+    app_name <- factor(app_name)
+  })
+```
+
+
+How Many Apps Have I used?
+
+```{r}
+
+length(levels(app_usage$app_name))
+
+
+app.stats <- app_usage %>% 
+  group_by(app_name) %>%
+  summarise(count = n(),
+            total_app_usage = sum(on_screen),
+           average_app_usage = mean(on_screen)) %>%
+  ungroup()
+```
+
+##  App Usage by Count
+
+```{r apps by count}
+app.stats %>% 
+    ggplot(aes(x = count,
+               y = fct_reorder(app_name, count),
+               color = count))+
+             geom_point() +
+  scale_color_continuous_tableau("Red")
+```
+
+## App Usage by Time
+```{r apps by time}
+app.stats %>%
+   arrange(desc(total_app_usage)) %>%
+  slice(1:15) %>%
+  ggplot(aes(x = total_app_usage,
+             y = fct_reorder(app_name, total_app_usage))) +
+  geom_point()
+```
+
+## Avg. App Time per Use
+```{r avg. app timeper use}
+app.stats %>% 
+  arrange(desc(average_app_usage)) %>%
+  slice(1:15) %>%
+  ggplot(aes(x = average_app_usage,
+             y = fct_reorder(app_name, average_app_usage))) +
+  geom_point()
+```
+
+
+# Predicting Phone Usage
+
+Are there certain times of the day when I use my phone more often than others? This is the question I will seek to address in the following section. I will do this by breaking up the time of day into blocks:
+
+* morning
+* mid-day
+* afternoon
+* evening
+
+And then I will create a model to predict the likelihood of using my phone.
+```{r predicting phone use}
+
+#create function to assign time of day depending on hour
+time_of_day <- function(x){
+  if(x %>% between(0,10)){
+    "morning"
+  } else if(x %>% between(11, 14)){
+    "mid-day"
+  } else if(x %>% between(15, 18)){
+      "afternoon"
+  } else if(x %>% between(19, 23)){
+      "evening"
+  }
+}
+#apply function to the new column
+pickups$time_of_day <- map_chr(.x = hour(pickups$date), .f = time_of_day)
+pickups$time_of_day <- factor(pickups$time_of_day)
+
+lmo <- lm(formula = length_in_minutes ~ time_of_day + weekdays, data = pickups)
+
+pickups %>% data_grid(time_of_day, weekdays) %>% add_predictions(lmo)
+
+```
