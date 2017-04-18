@@ -27,7 +27,7 @@ pickups$date <- str_replace(pickups$date, "-07:00", "")
 pickups <- pickups %>% within({
   date <- parse_date_time(date, "%Y-%m-%d %H:%M:S")
   length_in_minutes <- length_in_seconds/60
-  month <- factor(month(date, label = TRUE, abbr = TRUE))
+  month <- factor(month(date, label = TRUE, abbr = FALSE))
   day <- factor(day(date))
   weekdays <- factor(weekdays(date))
   weekdays <- fct_relevel(weekdays, "Monday", "Tuesday", "Wednesday", 

@@ -4,8 +4,7 @@ library(leaflet)
 
 source("data/helpers.R")
 
-
-weekdays <- levels(pickups$weekdays)
+months <- levels(pickups$month)
 periods <- levels(pickups$time_of_day)
 
 # Define UI for application that draws a histogram
@@ -22,10 +21,18 @@ ui <- navbarPage(title = "Moment App Smartphone Usage",
                                         bottom = 100,
                                         width = "auto", 
                                         height = "auto",
-                            selectInput(inputId = "weekdays",
-                                                   label = "Select Weekday",
-                                                   choices = weekdays),
-                                       selectInput(inputId = "time_of_day",
+                                        selectInput(inputId = "month",
+                                                    label = "Select Month",
+                                                    choices = months),
+                                        
+                                        sliderInput(inputId = "days",
+                                                    label = "Select Day",
+                                                    min = 1, 
+                                                    max = 31,
+                                                    value = 1, 
+                                                    step = 1),
+                                       
+                                        selectInput(inputId = "time_of_day",
                                                    label = "Select Time of Day",
                                                    choices = periods))),
                  tabPanel("Data",
@@ -39,7 +46,9 @@ ui <- navbarPage(title = "Moment App Smartphone Usage",
 server <- function(input, output) {
   
   by.weekday <- reactive({
-    pickups %>% filter(weekdays == input$weekdays & time_of_day == input$time_of_day)
+    pickups %>% filter(month == input$month &
+                       day == input$days & 
+                         time_of_day == input$time_of_day)
   })
   
   output$phone_use.map <- renderLeaflet({
