@@ -22,7 +22,7 @@ ui <- navbarPage(title = "Moment App Smartphone Usage",
                                         bottom = 100,
                                         width = "auto", 
                                         height = "auto",
-                            selectInput(inputId = "weekday",
+                            selectInput(inputId = "weekdays",
                                                    label = "Select Weekday",
                                                    choices = weekdays),
                                        selectInput(inputId = "time_of_day",
@@ -37,16 +37,26 @@ ui <- navbarPage(title = "Moment App Smartphone Usage",
 
 # Define server logic required to draw a histogram
 server <- function(input, output) {
-   
-   output$distPlot <- renderPlot({
-      # generate bins based on input$bins from ui.R
-      x    <- faithful[, 2] 
-      bins <- seq(min(x), max(x), length.out = input$bins + 1)
-      
-      # draw the histogram with the specified number of bins
-      hist(x, breaks = bins, col = 'darkgray', border = 'white')
-   })
-}
+  
+  by.weekday <- reactive({
+    pickups %>% filter(weekdays == input$weekdays & time_of_day == input$time_of_day)
+  })
+  
+  output$phone_use.map <- renderLeaflet({
+    leaflet(data = by.weekday) %>%
+      addProviderTiles(provider = providers$OpenStreetMap.France) %>%
+      setView(lat = 37.73, lng = -122.4194, zoom = 10)
+  })
+  
+  observe({
+    leafletProxy('phone_use.map', data = by.weekday()) %>%
+      clearMarkerClusters() %>%
+      addCircleMarkers(clusterOptions = markerClusterOptions())
+  })
+  
+  
+  output$data.table <- renderDataTable(data.frame(by.weekday()))
+   }
 
 # Run the application 
 shinyApp(ui = ui, server = server)
