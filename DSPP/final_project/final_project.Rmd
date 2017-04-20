@@ -1,12 +1,12 @@
 ---
 title: "final_project"
 author: "Joseph Walker"
-date: "April 15, 2017"
+date: "`r Sys.Date()`"
 output: html_document
 ---
 
 ```{r global options, include=TRUE}
-knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE, out.width = "800px", out.height = "800px")
 library(tidyverse)
 library(tidyjson)
 library(jsonlite)
@@ -19,59 +19,28 @@ library(knitr)
 library(modelr)
 ```
 
-# Introduction - The Quantified Self
+# Introduction
 
-Data is everywhere. From the transaction we make at the store, to the website we click on when we're browsing the internet. With the rise of smart phones in the past decade, this data is becoming more easily accessible and applicable to our daily lives. The small but powerful devices that fit neatly into our pocket can track where we are, what we eat, who we communicate with. You name it, there's an app for it. We truly are living in the age of the quantified self.
+Over the past decade, the use of the smart phone has expanded at an unprecedented rate. Society on a global scale seems to be relying more heavily on these compact, yet powerful devices that give us an infinte amount of data at the touch of our fingertips. Like a high-tech swiss army knife, they are equipped with apps that help us keep in touch with friends, stay updated on news, schedule our lives, track our vitals, etc... If you can think of a need, there's probably an app for it. However, I find myself and those around me more and more distracted from the present by these high addictive devices. Like a bug buzzing toward the light, we are drawn to the luminescence of our screens.
 
-More and more,I find myself distracted from the present by that shiny little screen. As I stop for a moment to take a look around, I notice everyone around me is also distracted by their phones.
+Luckily, there's an app to help with that!
 
-As I was listening to the radio one morning on my way to work, I heard a segment about an app that track's your phone usage. Moment, as the app is called, tracks how much you are using your smart phone each day. The website's slogan reads "Put down your phone and get back to your life". Immediately, I knew I had to try it out. After downloading the app, I read through the tutorial on how to use it. 
+Moment® is an app for the iphone that tracks how much you use your phone each day. It is easy to use and has features to help you limit your phone use. Here's how it works: 
 
 Each morning when you wake up, and every evening before bed, all you have to do is take a screenshot of your phone's battery information. The moment app automatically detects the screenshots and does the rest.
 
-I decided to test it out for a month to see how much time I spend on my phone. The app even allows you to export your data in JSON format to explore for yourself. With that being said, I decided this would be a great opportunity to put my new found R skills to the test with data that I created myself!
+For more information about the app and where to download it, check out the website: [![Moment](C:/workspace/UCB_R/DSPP/final_project/Moment_App/www/moment_image.png)](https://inthemoment.io/)
+
+# The Data
+
+I decided to test out the app for a month to get a handle on my own usage. The app even allows you to export your data in JSON format to explore for yourself. Let's dive into the data to see how it all panned out!
 
 ```{r Import Data}
 
-#import data
+#import the data
 moment <- tidyjson::read_json("moment.json")
 
 #tidy into dataframe
-df <- moment %>% 
-  enter_object('days') %>% 
-  gather_array() %>% 
-  spread_values(minuteCount = jnumber('minuteCount'),
-                pickupCount = jnumber('pickupCount'),
-                date = jstring('date'),
-                sessions = jstring('sessions'),
-                pickups = jstring('pickups'),
-                appusages = jstring('appUsages'))
-
-#spread nested columns
-sessions <- moment %>%
-  enter_object('days') %>%
-  gather_array() %>%
-  spread_values(minuteCount = jnumber('minuteCount'),
-                pickupCount = jnumber('pickupCount'),
-                date = jstring('date')) %>%
-  enter_object('sessions') %>% 
-  gather_array %>%
-  spread_values(location_accuracy_in_meters = jnumber("locationAccuracyInMeters"),
-                length_mins = jnumber("lengthInMinutes"),
-                lat = jnumber("latitude"),
-                long = jnumber("longitude"),
-                date_sessions = jstring("date"))
-
-
-app_usage <-  moment %>%
-  enter_object('days') %>%
-  gather_array() %>%
-  spread_values(date = jstring('date')) %>%
-  enter_object('appUsages') %>%
-  gather_array() %>%
-  spread_values(app_name = jstring("appName"),
-                on_screen = jnumber("onScreen"))
-
 pickups <- moment %>%
   enter_object('days') %>%
   gather_array() %>%
@@ -84,17 +53,32 @@ pickups <- moment %>%
                 date = jstring("date"),
                 latitude = jnumber("latitude"),
                 start_battery_level = jnumber("startingBatteryLevel"))
+
+
+app_usage <-  moment %>%
+  enter_object('days') %>%
+  gather_array() %>%
+  spread_values(date = jstring('date')) %>%
+  enter_object('appUsages') %>%
+  gather_array() %>%
+  spread_values(app_name = jstring("appName"),
+                on_screen = jnumber("onScreen"))
+
+
 ```
 
 # Pickups {.tabset}
 
-Let's explore how frequently I use my phone each day by diving into the pickups dataset.
+The **pickups** portion of the data tracks information related to each time you pick up your phone.
 ```{r pickups}
 
+glimpse(pickups)
+
+#Clean up the 'date' column so we can start exploring daily usage
 pickups$date <- str_replace(pickups$date, "T", " ")
 pickups$date <- str_replace(pickups$date, "-07:00", "")
 
-
+#Cleanup the columns of the data frame
 pickups <- pickups %>% within({
   date <- parse_date_time(date, "%Y-%m-%d %H:%M:S")
   length_in_minutes <- length_in_seconds/60
@@ -122,13 +106,19 @@ avg.pickups <- mean(daily_pickups$pickups)
 ## Daily Usage {.tabset}
 
 ### Pickups per Day
+
+On average, I use my phone `r round(avg.pickups, digits = 2)` times per day
+
+April 3rd and 4th appear to be outliers; I used my phone much more than usual on those days.
+This was due to a series of car issues I had that morning which took the most of the day and part of Tuesday to take care of!
+
 ```{r}
 #plot pickups by day
 daily_pickups %>% ggplot(aes(x = fct_reorder(interaction(month,day,sep = " - "),x = row.index), 
                              y = pickups, group = day)) +
   geom_point() +
   geom_line(aes(group = month)) +
-  geom_line(y = avg.pickups, linetype = 3) +
+  geom_line(y = avg.pickups, linetype = 3, color = "red") +
   labs(title = "Total Pickups per Day", 
        subtitle = "dashed line = average pickups per day",
        x = "Date",
@@ -141,13 +131,15 @@ daily_pickups %>% ggplot(aes(x = fct_reorder(interaction(month,day,sep = " - "),
 
 
 ###  Time Spent on Phone per Day
-```{r time spent - total}
+
+```{r avgerage time per day}
 #calculate avg length of time spent on phone per day
 avg.time.per.day <- mean(daily_pickups$length_in_minutes)
+```
+On average, I used my phone `r round(avg.time.per.day, digits = 2)` minutes per day.
 
-#calculate avergae time spent per pickup
-avg.time.per.pickup <- sum(daily_pickups$length_in_minutes)/sum(as.numeric(daily_pickups$pickups))
-
+Again, I spent a significantly longer amount of time dealing with car troubles on April 3rd.
+```{r time spent - total}
 #calculate average time spent per pickup, per day
 daily_pickups <- daily_pickups %>%
   mutate(avg = length_in_minutes/pickups)
@@ -157,7 +149,7 @@ daily_pickups %>% ggplot(aes(x = fct_reorder(interaction(month,day,sep = " - "),
                              group = day)) +
   geom_point() +
   geom_line(aes(group = month)) +
-  geom_line(y = avg.time.per.day, linetype = 3) +
+  geom_line(y = avg.time.per.day, linetype = 3, color = 'red') +
   labs(title = "Time Spent on Phone Each Day", 
        subtitle = "Dashed Line = Average Length of Time Spent on Phone Over All Days",
        x = "Date",
@@ -170,6 +162,12 @@ daily_pickups %>% ggplot(aes(x = fct_reorder(interaction(month,day,sep = " - "),
 ```
 
 ### Average per Pickup
+```{r avg. per pickup}
+#calculate average time spent per pickup
+avg.time.per.pickup <- sum(daily_pickups$length_in_minutes)/sum(as.numeric(daily_pickups$pickups))
+```
+
+I spend about `r round(avg.time.per.pickup, digits = 2) ` minutes every time I pick up my phone. Later on, we'll explore what apps I'm using to make more sense of this.
 
 ```{r Average Time per Pickup per Day}
 global.avg <- mean(daily_pickups$avg)
@@ -178,7 +176,7 @@ daily_pickups %>% ggplot(aes(x = fct_reorder(interaction(month,day,sep = " - "),
                              y = avg)) +
   geom_point()+
   geom_line(aes(group = month)) +
-  geom_line(y = global.avg, linetype = 3, aes(group = day)) +
+  geom_line(y = global.avg, linetype = 3, aes(group = day), color = 'red') +
   labs(title = "Average Length of Time Spent on Phone per Pickup, per Day",
        subtitle = "Dashed Line = Global Average",
        x = "Date",
@@ -192,21 +190,30 @@ daily_pickups %>% ggplot(aes(x = fct_reorder(interaction(month,day,sep = " - "),
 
 ## By Weekday {.tabset}
 
+Let's take a look to see if there are any trends in phone use based on the weekday.
+ 
+*I filtered out April 3rd since it isn't representative of my normal usage.*
+
 ### Pickups
+
+It looks like Tuesdays have a lot going on!
+
 ```{r pickups by weekday}
 #pickups by weekday
 pickups.by.weedkay <- daily_pickups %>%
+  filter(!month == 'Apr' | !day == 3) %>%
   group_by(weekdays) %>%
 summarise(pickups = sum(pickups))
 
 #avg. pickups by weekday
 avg_by_weekday <- daily_pickups %>%
+  filter(!month == 'Apr' | !day == 3) %>%
   group_by(weekdays) %>%
   summarise(avg_pickups = mean(pickups),
             avg_time = mean(length_in_minutes)) %>%
   mutate(avg_per_pickup = avg_time/avg_pickups)
 
-pickups.by.weedkay%>%
+pickups.by.weedkay %>%
   ggplot(aes(x = weekdays, y = pickups)) +
   geom_bar(stat= "identity", aes(fill = weekdays)) +
   geom_point(data = avg_by_weekday, 
@@ -228,8 +235,12 @@ pickups.by.weedkay%>%
 
 
 ### Time Spent
-```{r Time Spent per Weekday}
 
+On second thought, Fridays appear to be the days in which I'm using my phone the most in terms of time spent. Even though I'm picking up my phone more on Tuesdays, I don't seem to be spending as much time on each pickup. Whether this is due to little distractions or because I'm using it for tasking/scheduling purposes is less clear. Looking at what apps I'm using will help to figure this out.
+
+Overall, I'm using my phone less on the weekends. i'm glad to see this trend; any where I can cut down on phone use and focus on the present is a step in the right direction.
+
+```{r Time Spent per Weekday}
 avg_by_weekday %>% ggplot(aes( x = weekdays, y = avg_time, label = avg_per_pickup)) +
   geom_bar(stat = "identity", aes(fill = weekdays)) +
   geom_point(aes(y = avg_per_pickup)) +
@@ -244,6 +255,8 @@ avg_by_weekday %>% ggplot(aes( x = weekdays, y = avg_time, label = avg_per_picku
 ```
 
 ### Average Time per Pickup
+
+I spend about 2-3 minutes on my phone every time I pick it up, regardless of the week day. I am a bit surprised to see that I spend the long time per pickup on Saturdays, even though I use my phone less on Saturdays overall.
 ```{r Avg. time per pickup - weekdays}
 avg_by_weekday %>% ggplot( aes( x = weekdays, y = avg_per_pickup, fill = weekdays)) +
   geom_bar(stat = "identity") +
@@ -276,13 +289,9 @@ app_usage <- app_usage %>%
 ```
 
 
-How Many Apps Have I used?
+In total, I used `r length(levels(app_usage$app_name))` apps throughout the experiment.
 
 ```{r}
-
-length(levels(app_usage$app_name))
-
-
 app.stats <- app_usage %>% 
   group_by(app_name) %>%
   summarise(count = n(),
@@ -293,13 +302,20 @@ app.stats <- app_usage %>%
 
 ##  App Usage by Count
 
+It makes sense that the home and lock screen would be the app I most use since it is literally the first screen that pops up when I need to use my phone. 
+
+Looking at the data, the top 10 apps indicate that I'm using my phone primarily for social media - Snapchat, Messages, Facebook, and Instagram - and for web browsing and productivity apps related to work - Chrome, Calendar, and Mail.
 ```{r apps by count}
 app.stats %>% 
     ggplot(aes(x = count,
                y = fct_reorder(app_name, count),
                color = count))+
              geom_point() +
-  scale_color_continuous_tableau("Red")
+  theme_dark() +
+  labs(title = "Individual Counts for Apps used from March 13 - April 15",
+       x = "Count",
+       y = "App") +
+  scale_color_distiller(palette = "RdPu", direction = 1)
 ```
 
 ## App Usage by Time
@@ -308,8 +324,14 @@ app.stats %>%
    arrange(desc(total_app_usage)) %>%
   slice(1:15) %>%
   ggplot(aes(x = total_app_usage,
-             y = fct_reorder(app_name, total_app_usage))) +
-  geom_point()
+             y = fct_reorder(app_name, total_app_usage),
+             color = total_app_usage)) +
+  geom_point() +
+  labs(title = "App Use by Time",
+       x = "Time (Minutes)",
+       y = "App") +
+  theme_dark() +
+  scale_color_distiller(palette = "RdPu", direction = 1)
 ```
 
 ## Avg. App Time per Use
@@ -318,8 +340,15 @@ app.stats %>%
   arrange(desc(average_app_usage)) %>%
   slice(1:15) %>%
   ggplot(aes(x = average_app_usage,
-             y = fct_reorder(app_name, average_app_usage))) +
-  geom_point()
+             y = fct_reorder(app_name, average_app_usage),
+             color = average_app_usage)) +
+  geom_point() +
+  labs(title = "Average Time on App per Use",
+       x = "Time (Minutes)",
+       y = "App") +
+  theme_dark() +
+  scale_color_distiller(palette = "RdPu", direction = 1)
+  
 ```
 
 
@@ -357,11 +386,6 @@ levels(pickups$time_of_day)
 lmo <- function(x){lm(data = x, formula = length_in_minutes ~ weekdays * time_of_day)}
 
 rsquare(lmo(pickups), pickups)
-
-pickups %>%
-  add_residuals(lmo) %>%
-  ggplot(aes(x = length_in_minutes, y = resid))+
-  geom_point()
 
 
 # df.model <- pickups %>% 

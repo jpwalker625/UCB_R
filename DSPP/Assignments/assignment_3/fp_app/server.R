@@ -31,7 +31,8 @@ function(input, output){
   observe({
     pal <- my_colors()
     
-    add_labels <- paste(by.month()$name,':', by.stat())
+     
+      add_labels <- paste(by.month()$name,':', by.stat())
     
     leafletProxy('county.map', data = by.month()) %>%
       clearShapes() %>%

@@ -26,12 +26,13 @@ pickups$date <- str_replace(pickups$date, "-07:00", "")
 
 pickups <- pickups %>% within({
   date <- parse_date_time(date, "%Y-%m-%d %H:%M:S")
-  length_in_minutes <- length_in_seconds/60
+  length_in_minutes <- round(length_in_seconds/60, digits = 2)
   month <- factor(month(date, label = TRUE, abbr = FALSE))
   day <- factor(day(date))
   weekdays <- factor(weekdays(date))
   weekdays <- fct_relevel(weekdays, "Monday", "Tuesday", "Wednesday", 
                            "Thursday", "Friday", "Saturday", "Sunday")
+  battery_use <- (start_battery_level - end_battery_level) * 100
 })
 
 time_of_day <- function(x){
@@ -51,3 +52,7 @@ pickups$time_of_day <- factor(pickups$time_of_day)
 pickups$time_of_day <- pickups$time_of_day %>% fct_relevel("morning","mid-day", "afternoon","evening")
 pickups$latitude <- round(pickups$latitude, digits = 2)
 pickups$longitude <- round(pickups$longitude, digits = 2)
+
+pickups <- pickups %>%
+  select(-document.id, -array.index)
+pickups <- pickups %>% select(order(colnames(pickups)))

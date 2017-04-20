@@ -1,6 +1,7 @@
 
 library(shiny)
 library(leaflet)
+library(rvest)
 
 source("data/helpers.R")
 
@@ -8,11 +9,11 @@ months <- levels(pickups$month)
 periods <- levels(pickups$time_of_day)
 
 # Define UI for application that draws a histogram
-ui <- navbarPage(title = "Moment App Smartphone Usage",
+ui <- navbarPage(title = "Moment App Phone Usage",
                  tabPanel("Interactive Map",
                           leafletOutput(outputId = 'phone_use.map',
-                                        width = "800px",
-                                        height = "800px"),
+                                        width = "100%",
+                                        height = "550px"),
                           absolutePanel(fixed = TRUE, 
                                         draggable = TRUE, 
                                         top = "auto", 
@@ -29,7 +30,7 @@ ui <- navbarPage(title = "Moment App Smartphone Usage",
                                                     label = "Select Day",
                                                     min = 1, 
                                                     max = 31,
-                                                    value = 1, 
+                                                    value = 14, 
                                                     step = 1),
                                        
                                         selectInput(inputId = "time_of_day",
@@ -57,10 +58,18 @@ server <- function(input, output) {
       setView(lat = 37.73, lng = -122.4194, zoom = 10)
   })
   
+  
   observe({
+    
+    x <- by.weekday()$battery_use
+      battery_use <- ifelse(x < 1, "< 1", x)
+
+    add_labels <- paste('<p>', "Pickup Duration:", by.weekday()$length_in_minutes, "minutes", '<br>',
+                        "Battery Use:", battery_use, "%", '<br>', '</p>', sep = " ")
+    
     leafletProxy('phone_use.map', data = by.weekday()) %>%
       clearMarkerClusters() %>%
-      addCircleMarkers(clusterOptions = markerClusterOptions())
+      addCircleMarkers(label = lapply(add_labels,HTML), clusterOptions = markerClusterOptions())
   })
   
   
