@@ -13,7 +13,7 @@ ui <- navbarPage(title = "Moment App Phone Usage",
                  tabPanel("Interactive Map",
                           leafletOutput(outputId = 'phone_use.map',
                                         width = "100%",
-                                        height = "550px"),
+                                        height = "800px"),
                           absolutePanel(fixed = TRUE, 
                                         draggable = TRUE, 
                                         top = "auto", 
@@ -32,7 +32,8 @@ ui <- navbarPage(title = "Moment App Phone Usage",
                                                     max = 31,
                                                     value = 14, 
                                                     step = 1),
-                                       
+                                        h5(paste("The data set ranges from March 14 - April 17")),
+                                        
                                         selectInput(inputId = "time_of_day",
                                                    label = "Select Time of Day",
                                                    choices = periods))),
@@ -55,7 +56,7 @@ server <- function(input, output) {
   output$phone_use.map <- renderLeaflet({
     leaflet(data = by.weekday) %>%
       addProviderTiles(provider = providers$OpenStreetMap.France) %>%
-      setView(lat = 37.73, lng = -122.4194, zoom = 10)
+      setView(lat = 37.73, lng = -122.4194, zoom = 8)
   })
   
   

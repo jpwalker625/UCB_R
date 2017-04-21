@@ -1,12 +1,17 @@
 ---
-title: "final_project"
-author: "Joseph Walker"
+title: "Tracking Smart Phone Usage With the Moment App"
+author: "Joseph Walker - jpwalker625@gmail.com"
 date: "`r Sys.Date()`"
-output: html_document
+output: 
+  html_document: 
+    highlight: tango
+    theme: journal
+    toc: yes
+    toc_float: yes
 ---
 
 ```{r global options, include=TRUE}
-knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE, out.width = "800px", out.height = "800px")
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE, out.width = "800px", out.height = "800px")
 library(tidyverse)
 library(tidyjson)
 library(jsonlite)
@@ -21,7 +26,7 @@ library(modelr)
 
 # Introduction
 
-Over the past decade, the use of the smart phone has expanded at an unprecedented rate. Society on a global scale seems to be relying more heavily on these compact, yet powerful devices that give us an infinte amount of data at the touch of our fingertips. Like a high-tech swiss army knife, they are equipped with apps that help us keep in touch with friends, stay updated on news, schedule our lives, track our vitals, etc... If you can think of a need, there's probably an app for it. However, I find myself and those around me more and more distracted from the present by these high addictive devices. Like a bug buzzing toward the light, we are drawn to the luminescence of our screens.
+Over the past decade, the use of mobile technology has expanded at an unprecedented rate. All around the world, people are relying more heavily on these so called 'smart phones' to guide them through their daily lives. These compact, yet powerful devices give us an infinte amount of data at the touch of our fingertips. Like a high-tech swiss army knife, they are equipped with apps that help us keep in touch with friends, stay updated on news, schedule our lives, track our vitals, etc... If you can think of a need, there's probably an app for it. More likely, there's a highly addictive app that you probably don't need! Whatever the case may be, I find myself and those around me ever more distracted by our devices. Like a bug buzzing toward the light, we are drawn to the luminescence of our screens.
 
 Luckily, there's an app to help with that!
 
@@ -352,16 +357,18 @@ app.stats %>%
 ```
 
 
-# Predicting Phone Usage
+# Predicting Phone Usage {.tabset .tabset-fade}
 
-Are there certain times of the day when I use my phone more often than others? This is the question I will seek to address in the following section. I will do this by breaking up the time of day into blocks:
+Are there certain times of the day when I use my phone more often than others? This is the question I will seek to address in the following section. 
+
+First, I need to break up the date-time into sections:
 
 * morning
 * mid-day
 * afternoon
 * evening
 
-And then I will create a model to predict my time usage based on the time of day.
+And then I will build a linear model to determine or 'predict' how long I am on my phone based on the time of day.
 ```{r predicting phone use}
 
 #create function to assign time of day depending on hour
@@ -382,27 +389,132 @@ pickups$time_of_day <- factor(pickups$time_of_day)
 
 
 levels(pickups$time_of_day)
-
-lmo <- function(x){lm(data = x, formula = length_in_minutes ~ weekdays * time_of_day)}
-
-rsquare(lmo(pickups), pickups)
-
-
-# df.model <- pickups %>% 
-#   data_grid(weekdays,time_of_day, location) %>%
-#   add_predictions(lmo)
 ```
 
 
-# round latitude and longitude down to two decimal places in order to group the locations into broader areas
+## Linear Model 1
 
-pickups$longitude <- pickups$longitude %>% round(digits = 2)
-pickups$latitude <- pickups$latitude %>% round(digits = 2)
+Here are the components of the linear model: 
 
-pickups <- pickups %>%
-  mutate(location = str_c(longitude, latitude, sep = ", "))
+response variable: length_in_minutes  
+predictors: weekdays * time_of_day
 
-pickups$location <- factor(pickups$location)
+( * denotes a crossed interaction between the variables, since there is data for every occurrence of an interaction between the day and time of day)
+
+```{r linear model 1}
+lm1 <- lm(data = pickups, formula = length_in_minutes ~ weekdays * time_of_day)
+
+#Determine the Fit of the model using RSquared
+lm1_rsquare <- round(rsquare(lm1, pickups), digits = 2)
+lm1_rmse <- round(rmse(lm1, pickups), digits = 2)
+```
+
+The model I have used to make the predictions is not very good at all. In fact, it's terrible.  
+The low r squared value of `r lm1_rsquare` signifies that the predictors, i.e. the explanatory variables don't do a very good job of explaining the data at all. In other words, most of the variation in the data is coming from other variables. Knowing the weekday and the time of day don't necessarily give me a good idea of how much time I spend on my phone.
 
 
+In a good model, we would expect to see a random distribution of the residuals. However, there is a trend of high outliers, that isn't accounted for by the weekday or the time of day.
 
+```{r residuals} 
+add_residuals(data = pickups, model = lm1, var = 'residuals') %>%
+  ggplot(aes(x = date, y = residuals, color = weekdays, shape = time_of_day))+
+  geom_ref_line(h = 0, colour = "gray") +
+  geom_line()+
+  labs(title = "Residuals Plot - LM1",
+       x = "Date",
+       y = "Residuals")
+
+add_residuals(data = pickups, model = lm1, var = 'residuals') %>%
+  ggplot(aes(x = date, y = residuals, color = time_of_day))+
+  geom_ref_line(h = 0, colour = "gray") +
+  geom_line() +
+  labs(title = "Residuals Plot - LM1",
+       x = "Date",
+       y = "Residuals")
+```
+
+## Linear Model 2 {.tabset .tabset-fade .tabset-pills}
+
+Perhaps I can refine the model by adding a predictor. Does the battery use give me a better idea of how much time I spend on my phone? One should hope so.
+
+The components for model 2 are:
+
+response variable: length_in_minutes  
+predictors: weekdays * time_of_day + battery_use
+
+To avoid over fitting, we are looking only at the main effect of battery use. It is not crossed because every level of battery use is not represented on a specific day/time of day interaction.
+
+```{r Linear Model 2}
+pickups <- pickups %>% 
+  mutate(battery_use = (start_battery_level - end_battery_level))
+
+lm2 <- lm(data = pickups, length_in_minutes ~ weekdays * time_of_day + battery_use)
+
+lm2_rsquare <- round(rsquare(lm2, pickups), digits = 2)
+lm2_rmse <- round(rmse(lm2, pickups), digits = 2)
+```
+
+### Residuals
+
+*Spoiler Alert*  
+
+While battery use does improve the fit of the model, an rsquare of `r lm2_rsquare` is still not a great fit. If I were a betting man, I'd be out a lot of money trying to guess how much time I spend on my phone using the predicted values of my model.
+
+I speculate that the app that I'm using has a much greater determination of how long I'm spending on my phone. Unfortunately, the Moment data does not allow me to connect which app I'm using for a particular pickup. The app only tracks the on-screen time for a particular app and isn't accurate enough to merge to the length of a particular pickup.
+
+```{r baterry use prediction}
+
+add_residuals(data = pickups, model = lm2, var = 'residuals') %>%
+  ggplot(aes(x = date, y = residuals, color = battery_use))+
+  geom_ref_line(h = 0, colour = "gray")+
+  geom_line() +
+  labs(title = "Residuals Plot - LM2",
+       x = "Date",
+       y = "Residuals") +
+  scale_color_continuous_tableau("Blue")
+
+```
+
+### Predictions 
+
+Let's look at the actual vs. predicted values to visualize why we can't rely on the model.
+
+```{r predicted}
+add_predictions(data = pickups, model = lm2, var = 'pred') %>%
+  ggplot(aes(length_in_minutes, pred)) +
+  geom_hex(bins = 150) +
+  annotate("text",x = 6, y =18, label = paste("rsquare = ", lm2_rsquare, sep = "")) +
+  annotate("text",x = 6, y =17, label = paste("rmse = ", lm2_rmse, sep = "")) +
+  labs( title = "Predicted vs. Actual - Length In Minutes",
+        x = "Length In Minutes",
+        y = "Predicted")
+```
+
+### Predictions - Zoomed
+
+If the model fit the data, we'd expect to see is a linear relationship where the predicted value was as close or equal to the actual value. Zooming in on the above plot to the bulk of the data, we can see there is very little correlation. The blue line represents the slope, which is dramatically off set. The dashed red line represents an ideal slope where we would like to see most of the points on or around.
+
+```{r zoomed predicted}
+
+add_predictions(data = pickups, model = lm2, var = 'pred') %>%
+  ggplot(aes(length_in_minutes, pred)) +
+  geom_point()+
+  geom_smooth() +
+  geom_abline(linetype = 2, color = "red") +
+  coord_cartesian(xlim = c(0, 5), ylim = c(0,5)) +
+  annotate("text",x = 4.3, y = 1.2, label = paste("rsquare = ", lm2_rsquare, sep = "")) +
+  annotate("text",x = 4.3, y = 1 , label = paste("rmse = ", lm2_rmse, sep = "")) +
+  labs(title = "Predicted vs. Actual - Length In Minutes",
+       subtitle = "zoomed in to 0-5 minute interval",
+       x = "Length In Minutes",
+       y = "Predicted")
+
+```
+
+---
+
+# Shiny App
+
+For your visual entertainment, please follow the link below to check out the shiny app which shows the location of a pickup, and tells you how long the pickup occurred and what percentage of battery was used. There is also a data table with the associated that is filtered to the specific day and time of day you choose.
+
+[Shiny App - Using the Moment App to Track Phone Use](https://tictacjoe.shinyapps.io/moment_app_phone_usage/)
