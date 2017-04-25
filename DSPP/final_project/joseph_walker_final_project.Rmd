@@ -5,13 +5,13 @@ date: "`r Sys.Date()`"
 output: 
   html_document: 
     highlight: tango
-    theme: journal
+    theme: flatly
     toc: yes
     toc_float: yes
 ---
 
-```{r global options, include=TRUE}
-knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE, out.width = "800px", out.height = "800px")
+```{r global options, include= FALSE, warning=FALSE, message=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE, out.width = "800px", out.height = "800px")
 library(tidyverse)
 library(tidyjson)
 library(jsonlite)
@@ -34,7 +34,9 @@ Moment® is an app for the iphone that tracks how much you use your phone each da
 
 Each morning when you wake up, and every evening before bed, all you have to do is take a screenshot of your phone's battery information. The moment app automatically detects the screenshots and does the rest.
 
-For more information about the app and where to download it, check out the website: [![Moment](C:/workspace/UCB_R/DSPP/final_project/Moment_App/www/moment_image.png)](https://inthemoment.io/)
+For more information about the app and where to download it, check out the website: 
+
+[![Moment](C:/workspace/UCB_R/DSPP/final_project/Moment_App/www/moment_image.png)](https://inthemoment.io/)
 
 # The Data
 
