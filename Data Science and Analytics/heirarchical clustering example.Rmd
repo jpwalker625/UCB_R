@@ -1,0 +1,51 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+#load required packages
+library(tidyverse)
+library(gdata)
+
+#Get URL containing data
+url <- "http://www.stephansorger.com/content/DataScience_8_Case_dogdata.xls"
+
+#read in data
+dogdata <- read.xls(url, perl = "C:/Perl/bin/perl.exe")
+
+#create distance matrix
+dogdist <- dist(dogdata, method = "euclidean")
+
+#dogtree <- hclust(dogdist, method = "complete")
+
+#create heirarchical clustering object using wards
+dogwards <- hclust(dogdist, method = "ward.D")
+
+
+#dendrogram plot
+plot(dogwards)
+
+#create 4 clusters based on the data
+clusters <- cutree(dogwards, k = 4)
+
+ddclusts <- list()
+
+for(i in 1:4){
+  cluster <- dogdata %>% filter(clusters == i)
+  
+  ddclusts[[i]] <- cluster
+  
+}
+
+glimpse(ddclusts)
+
+#perform subsetting of columns 1:6 for each cluster data frame
+ddclustssubset <- lapply(ddclusts, '[', 1:6)
+
+#perform mean on each column of each dataframe
+lapply(ddclustssubset, colMeans)
+  
+
+```
+
