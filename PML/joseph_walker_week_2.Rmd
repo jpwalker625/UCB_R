@@ -1,0 +1,111 @@
+---
+title: "Assignment 2 - Part 2"
+author: "Joseph Walker"
+date: `r sys.Date()`
+output: html_document
+---
+
+
+
+```{r, echo= TRUE}
+#Define Global Variables
+knitr::opts_chunk$set(echo = T, warning = F, message = F,eval = T)
+
+#load required packages
+library(tidyverse)
+library(broom)
+library(modelr)
+```
+
+1) One downside of the linear model is that it is sensitive to unusual values because the distance 
+incorporates a squared term. Fit a linear model to the simulated data below, and visualise the 
+results.
+
+```{r}
+
+# Define simulated dataset
+sim1a <- tibble(
+  x = rep(1:10, each = 3),
+  y = x * 1.5 + 6 + rt(length(x), df = 2)
+)
+
+#build linear model with sim1a df
+model <- lm(y~x, data = sim1a)
+
+#tidy the model
+tidy_model <- model %>% tidy()
+
+#view the model stats
+tidy_model
+
+ggplot(sim1a, aes(x = x, y = y))+
+  geom_point() +
+  geom_smooth(method = "lm")
+```
+
+ Rerun a few times to generate different simulated datasets. What do you notice about the
+model?
+
+The estimate of the x coefficient (the slope term) is affected most when the outliers occur at the extreme ends of the data. Because the extreme ends of the data set act as anchors, they have more affect on the variation, expecially when these points are outliers.
+```{r}
+
+sim <- tibble()
+
+for(i in seq(3)) {
+  temp <- tibble (
+  x = rep(1:10, each = 3),
+  y = x * 1.5 + 6 + rt(length(x), df = 2),
+  rep = i)
+  
+  sim <- rbind(temp, sim)
+}
+
+sim_by_rep <- sim %>% group_by(rep) %>% nest(-rep)
+
+model <- function(data) {
+  lm(y ~ x, data = data)
+}
+
+nested_model <- sim_by_rep %>%
+  mutate(model = map(data, model))
+
+map(nested_model$model, tidy)
+
+
+ggplot(sim, aes(x = x, y = y, group = rep))+
+  geom_point(aes(color = factor(rep))) +
+  geom_smooth(aes(color = factor(rep)), method = 'lm', se= F)
+```
+
+
+2) One way to make linear models more robust is to use a different distance measure. For example, instead of root-mean-squared distance, you could use mean-absolute distance:
+
+> measure_distance <- function(mod, data) {
+    diff <- data$y - make_prediction(mod, data)
+    mean(abs(diff))
+    }
+
+Use optim() to fit this model to the simulated data above and compare it to the linear model.
+
+```{r}
+
+model1 <- function(a, data) {
+  a[1] + data$x * a[2]
+}
+
+measure_distance <- function(mod, data) {
+  diff <- data$y - model1(mod, data)
+  mean(abs(diff))
+}
+
+optimized_params <- optim(c(0, 0), measure_distance, data= sim1a)
+
+optimized_params <- optimized_params$par
+
+#compare optim model to original model
+ggplot(sim1a, aes(x=x, y = y)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = F) +
+  geom_abline(slope = optimized_params[2], intercept = optimized_params[1], linetype = 'dashed', color = "red")
+```
+
