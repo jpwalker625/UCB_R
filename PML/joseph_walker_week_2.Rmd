@@ -15,6 +15,7 @@ knitr::opts_chunk$set(echo = T, warning = F, message = F,eval = T)
 library(tidyverse)
 library(broom)
 library(modelr)
+library(ggpmisc)
 ```
 
 1) One downside of the linear model is that it is sensitive to unusual values because the distance 
@@ -22,6 +23,8 @@ incorporates a squared term. Fit a linear model to the simulated data below, and
 results.
 
 ```{r}
+#set seed for reproducibility
+set.seed(123)
 
 # Define simulated dataset
 sim1a <- tibble(
@@ -29,28 +32,33 @@ sim1a <- tibble(
   y = x * 1.5 + 6 + rt(length(x), df = 2)
 )
 
-#build linear model with sim1a df
-model <- lm(y~x, data = sim1a)
-
-#tidy the model
-tidy_model <- model %>% tidy()
+#build linear model and tidy it
+model <- lm(y~x, data = sim1a) %>% tidy()
 
 #view the model stats
 tidy_model
 
+#assign slope coefficient of x
+slope <- round(model$estimate[2], 3)
+
 ggplot(sim1a, aes(x = x, y = y))+
   geom_point() +
-  geom_smooth(method = "lm")
+  geom_smooth(method = "lm", se = F) +
+  annotate(geom = "text", x = 4, y = 20, label = paste("slope = ", slope, sep =" "))
 ```
 
- Rerun a few times to generate different simulated datasets. What do you notice about the
+Rerun a few times to generate different simulated datasets. What do you notice about the
 model?
 
-The estimate of the x coefficient (the slope term) is affected most when the outliers occur at the extreme ends of the data. Because the extreme ends of the data set act as anchors, they have more affect on the variation, expecially when these points are outliers.
+Variation on the x and y axis has different effects on the model. For instance, variation in the response (y) can increase the variation in the slope. In contrast, the greater the variance in the explanatory variable (x) leads to less variance of the slope coefficient. It is also important to note that the greatest shift in the model occurs when the variance in the response data (y)  is greater at the extreme ends of the explanatory variable. This is because the extreme ends of the explanatory variable (x) act as anchor points for the model. 
 ```{r}
+# set seed for reproducibility
+set.seed(2755)
 
+#create empty data frame
 sim <- tibble()
 
+#loop over 3 iterations of the simulated dataset and save to dataframe
 for(i in seq(3)) {
   temp <- tibble (
   x = rep(1:10, each = 3),
@@ -60,21 +68,46 @@ for(i in seq(3)) {
   sim <- rbind(temp, sim)
 }
 
+#nest the data frame
 sim_by_rep <- sim %>% group_by(rep) %>% nest(-rep)
 
+#create model function
 model <- function(data) {
   lm(y ~ x, data = data)
 }
 
-nested_model <- sim_by_rep %>%
-  mutate(model = map(data, model))
+#apply model and tidy function to each nested group
+tidy_models <- sim_by_rep %>%
+  mutate(model = map(data, model)) %>%
+  mutate(model = map(model, tidy)) %>%
+  arrange(rep)
 
-map(nested_model$model, tidy)
+#view the model summaries
+tidy_models$model
 
+#assign slopes of models 
+slopes <-  tidy_models %>%
+   select(-data) %>% 
+   unnest() %>%
+   filter(term == "x") %>%
+  pull(estimate) %>%
+  round(2)
+   
 
-ggplot(sim, aes(x = x, y = y, group = rep))+
-  geom_point(aes(color = factor(rep))) +
-  geom_smooth(aes(color = factor(rep)), method = 'lm', se= F)
+#visualize the models
+ggplot(sim, aes(x = x, y = y, color = factor(rep)))+
+  geom_point() +
+  stat_smooth(method = 'lm', se= F) +
+  guides(color = guide_legend(title = "replicate")) +
+  annotate(geom = "text", x = 3, y = 22,
+           label = paste("Slopes",
+                         "\n", 
+                         "1 (red) = ", slopes[1], 
+                         "\n", 
+                         "2 (green)= ", slopes[2],
+                         "\n",
+                         "3 (blue)= ", slopes[3],
+                         sep = ""))
 ```
 
 
