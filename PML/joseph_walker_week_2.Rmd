@@ -1,15 +1,15 @@
 ---
 title: "Assignment 2 - Part 2"
-author: "Joseph Walker"
-date: `r sys.Date()`
+author: "Joseph Walker (jpwalker625@gmail.com)"
+date: "`r format(Sys.Date(), '%b-%d-%Y')`"
 output: html_document
 ---
 
 
 
-```{r, echo= TRUE}
+```{r, warning = F, message = F}
 #Define Global Variables
-knitr::opts_chunk$set(echo = T, warning = F, message = F,eval = T)
+knitr::opts_chunk$set(echo = T, warning = F, message = F, eval = T)
 
 #load required packages
 library(tidyverse)
@@ -18,9 +18,7 @@ library(modelr)
 library(ggpmisc)
 ```
 
-1) One downside of the linear model is that it is sensitive to unusual values because the distance 
-incorporates a squared term. Fit a linear model to the simulated data below, and visualise the 
-results.
+#### 1) One downside of the linear model is that it is sensitive to unusual values because the distance incorporates a squared term. Fit a linear model to the simulated data below, and visualise the results.
 
 ```{r}
 #set seed for reproducibility
@@ -33,13 +31,14 @@ sim1a <- tibble(
 )
 
 #build linear model and tidy it
-model <- lm(y~x, data = sim1a) %>% tidy()
+tidy_model <- lm(y~x, data = sim1a) %>% 
+  tidy()
 
 #view the model stats
 tidy_model
 
 #assign slope coefficient of x
-slope <- round(model$estimate[2], 3)
+slope <- round(tidy_model$estimate[2], 2)
 
 ggplot(sim1a, aes(x = x, y = y))+
   geom_point() +
@@ -47,10 +46,9 @@ ggplot(sim1a, aes(x = x, y = y))+
   annotate(geom = "text", x = 4, y = 20, label = paste("slope = ", slope, sep =" "))
 ```
 
-Rerun a few times to generate different simulated datasets. What do you notice about the
-model?
+#### Rerun a few times to generate different simulated datasets. What do you notice about the model?
 
-Variation on the x and y axis has different effects on the model. For instance, variation in the response (y) can increase the variation in the slope. In contrast, the greater the variance in the explanatory variable (x) leads to less variance of the slope coefficient. It is also important to note that the greatest shift in the model occurs when the variance in the response data (y)  is greater at the extreme ends of the explanatory variable. This is because the extreme ends of the explanatory variable (x) act as anchor points for the model. 
+*Variation on the x and y axis has different effects on the model. For instance, variation in the response (y) can increase the variation in the slope. In contrast, the greater the variance in the explanatory variable (x) leads to less variance of the slope coefficient. It is also important to note that the greatest shift in the model occurs when the variance in the response data (y)  is greater at the extreme ends of the explanatory variable. This is because the extreme ends of the explanatory variable (x) act as anchor points for the model.*
 ```{r}
 # set seed for reproducibility
 set.seed(2755)
@@ -111,34 +109,42 @@ ggplot(sim, aes(x = x, y = y, color = factor(rep)))+
 ```
 
 
-2) One way to make linear models more robust is to use a different distance measure. For example, instead of root-mean-squared distance, you could use mean-absolute distance:
+#### 2) One way to make linear models more robust is to use a different distance measure. For example, instead of root-mean-squared distance, you could use mean-absolute distance:
 
-> measure_distance <- function(mod, data) {
-    diff <- data$y - make_prediction(mod, data)
-    mean(abs(diff))
+> measure_distance <- function(mod, data) {  
+        diff <- data$y - make_prediction(mod, data)  
+        mean(abs(diff))  
     }
 
-Use optim() to fit this model to the simulated data above and compare it to the linear model.
+#### Use optim() to fit this model to the simulated data above and compare it to the linear model.
 
 ```{r}
-
+#define model function
 model1 <- function(a, data) {
   a[1] + data$x * a[2]
 }
 
+#define measure_distance function
 measure_distance <- function(mod, data) {
   diff <- data$y - model1(mod, data)
   mean(abs(diff))
 }
 
+#create optimized paramaters
 optimized_params <- optim(c(0, 0), measure_distance, data= sim1a)
 
+#subset par (slope and intercept)
 optimized_params <- optimized_params$par
+
+#view optimized_params values
+optimized_params
 
 #compare optim model to original model
 ggplot(sim1a, aes(x=x, y = y)) +
   geom_point() +
-  geom_smooth(method = "lm", se = F) +
-  geom_abline(slope = optimized_params[2], intercept = optimized_params[1], linetype = 'dashed', color = "red")
+  geom_line(stat = "smooth", method = "lm", se = F, color = "blue", size = 0.8, alpha = 0.6) +
+  geom_abline(slope = optimized_params[2], intercept = optimized_params[1], linetype = 'dashed', color = "red") +
+  annotate(geom = 'text', x = 8, y = 10, label = paste("lm = blue"), color = "blue") +
+  annotate(geom = "text", x = 8, y = 9, label = paste("optim = red"), color = "red")
 ```
 
