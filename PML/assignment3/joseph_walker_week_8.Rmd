@@ -9,15 +9,7 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE, eval = TRUE, warning = FALSE, message = FALSE)
 ```
 
-
-Use the banking telemarketing dataset bank-additional-full.csv, (in bank-additional-full.zip posted on
-the Files/Assignment for Week 8) to build a model that determines whether a customer will subscribe
-to a bank term deposit (outcome variable "y").
-
-
-Use logistic regression, decision trees (with hyperparameter optimization), and random forest models to
-generate your results. Evaluate and compare the performance of each type of model using appropriate
-tools and methods (e.g., confusion matrix, ROC/AUC).
+**Use the banking telemarketing dataset bank-additional-full.csv, (in bank-additional-full.zip posted on the Files/Assignment for Week 8) to build a model that determines whether a customer will subscribe to a bank term deposit (outcome variable "y"). Use logistic regression, decision trees (with hyperparameter optimization), and random forest models to generate your results. Evaluate and compare the performance of each type of model using appropriate tools and methods (e.g., confusion matrix, ROC/AUC).**
 
 #Step 1: Import Data
 
@@ -45,7 +37,7 @@ library(stringr)
 names(bank_data) <- str_replace_all(string = names(bank_data), pattern = '\\.', replacement = "_")
 ```
 
-# Step 3: Modelling
+# Step 3: Modeling
 
 Before we begin to build any models, we first need to split the data. We will split the data into a training set and a test set. The training set is used to build the model while the test set is used the evaluate the model performance by comparing the predicted outcomes to the actual outcomes.
 
@@ -68,9 +60,7 @@ paste("Number of rows in training set: ", nrow(bank_train))
 paste("Number of rows in test set: ", nrow(bank_test))
 ```
 
-
-
-To start, we'll use **logistic regression** to create a model.
+To start, let's build a model using **logistic regression**.
 
 First, we need a formula.
 ```{r}
@@ -81,16 +71,75 @@ Our response variable in this case is `y` and the rest of the variables of the d
 
 Now let's build a logistic regression model using the `glm` function
 ```{r}
-glm_model <- glm(formula = fmla, data = bank_data, family = binomial(link = "logit"))
+glm_model <- glm(formula = fmla, data = bank_train, family = binomial(link = "logit"))
 ```
 
+To examine the model, we can use the `glance` function from the `broom` package.
 ```{r}
 library(broom)
 
 glance(glm_model)
 ```
 
+Now, let's proceed with making predictions on the test set.
 
+```{r}
+glm_preds <- predict(object = glm_model,
+                 newdata = bank_test, 
+                 type = "response")
+```
+
+Using the `prediction` function, the predicted probabilities of the response variable are computed. In our case, we have predicted the probability of a customer subscribing to a bank term deposit. In order to convert probabilities to actual class predictions, a threshold has to be set. 
+
+```{r}
+#convert probabiities to classifications
+glm_pred_class <- ifelse(glm_preds > 0.5, "yes", "no")
+
+#Examine the error rate with a Confusion Matrix
+library(caret)
+
+glm_matrix <- confusionMatrix(data = glm_pred_class, reference = bank_test$y, positive = "yes")
+
+glm_matrix
+```
+
+It is useful to know that you can specify the positive predicted class with the `positive` argument. Otherwise R defaults th positive value to the first level/factor.  
+  
+The accuracy of the model is `r glm_matrix$overall['Accuracy']`.  Pretty good!
+  
+Another useful statistic is the `no-information rate` which tells us how well our model would be at predicting the class probabilities purely by guessing. If the no-information rate is greater than the accuracy of the model, it's time to start looking for some better predictors!
+
+```{r}
+#Is the Accuracy better than the NIR?
+glm_matrix$overall["Accuracy"] > glm_matrix$overall["AccuracyNull"]
+
+#And the p-value that ACC > NIR
+glm_matrix$overall["AccuracyPValue"]
+```
+
+This threshold can be modified to change the sensitivity and specificity of the model depending on what your purpose is. For example, if we decrease the probability threshold, we allow more observation to be classified as a True Positive value, therefore increasing the sensitivity of the model. This comes at the cost of decreasing the specificity of the model since the false positive rate increases.
+
+```{r}
+#predictions with higher sensitivity
+sensitive <- ifelse(glm_preds > .1, "yes", "no")
+
+sensitive_matrix <-confusionMatrix(data = sensitive, reference = bank_test$y, positive = "yes")
+
+sensitive_matrix$table
+```
+
+In converse, if we increase the probability threshold, we decrease the amount of observations classified as True Positives but we increase the certainty of these observations being right. This also improves the model's ability to correctly identify true ngatives.In this case, the model's sensitivity is low, but the specificity is high. 
+
+```{r}
+#predictions with higher specificity
+specific <- ifelse(glm_preds > .9, "yes", "no")
+
+specific_matrix <- confusionMatrix(specific, bank_test$y, positive = "yes")
+
+specific_matrix$table
+```
+
+## Another Model
 
 
 
