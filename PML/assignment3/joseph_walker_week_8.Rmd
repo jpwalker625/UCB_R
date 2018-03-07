@@ -1,0 +1,103 @@
+---
+title: "Assignment for week 8"
+author: "Joseph Walker"
+date: "March 6, 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, eval = TRUE, warning = FALSE, message = FALSE)
+```
+
+
+Use the banking telemarketing dataset bank-additional-full.csv, (in bank-additional-full.zip posted on
+the Files/Assignment for Week 8) to build a model that determines whether a customer will subscribe
+to a bank term deposit (outcome variable "y").
+
+
+Use logistic regression, decision trees (with hyperparameter optimization), and random forest models to
+generate your results. Evaluate and compare the performance of each type of model using appropriate
+tools and methods (e.g., confusion matrix, ROC/AUC).
+
+#Step 1: Import Data
+
+```{r}
+#load tidyverse for data wrangling
+library(tidyverse)
+
+#read in the data file
+bank_data <- read.csv("bank-additional-full.csv", sep = ";", header = TRUE)
+
+#examine the data
+summary(bank_data)
+```
+
+# Step 2: Tidy, Wrangle, Transform
+
+Initially summarizing the data allows us to get a high level overview. We can see what type of variables we're dealing with (nominal or categorical), whether or not there's any missing data (NA's or NULL's), and how we may need to alter the data to work with it more efficiently.
+
+Fortunately, this data set is rather clean but there are a few modifications to make. I personally find periods (.) annoying in column names so let's change those.
+
+```{r}
+#for manipulating strings
+library(stringr)
+
+names(bank_data) <- str_replace_all(string = names(bank_data), pattern = '\\.', replacement = "_")
+```
+
+# Step 3: Modelling
+
+Before we begin to build any models, we first need to split the data. We will split the data into a training set and a test set. The training set is used to build the model while the test set is used the evaluate the model performance by comparing the predicted outcomes to the actual outcomes.
+
+*Be careful not to train and test a model with the same dataset. This is known as overfitting and may cause the model to be too specific to the particular dataset you are using. Since the purpose of building a predictive model is to make accurate predictions on events that have not yet occurred (the future), we need a model that performs well in general, not just on past performance. Using a train and test set split is one way of doing this.*
+
+It is standard practice to partition the data using an 80/20 split: 80% of the data is used for training and 20% is used for testing.
+```{r}
+#get number of rows in the data set
+nrows <- nrow(bank_data)
+
+#create sample index for splitting
+sample <- sample.int(nrows, size = .8 * nrows, replace = FALSE)
+
+#split data into train and test set
+bank_train <- bank_data[sample, ]
+bank_test <- bank_data[-sample, ]
+
+paste("number of rows in full data set:", nrow(bank_data))
+paste("Number of rows in training set: ", nrow(bank_train))
+paste("Number of rows in test set: ", nrow(bank_test))
+```
+
+
+
+To start, we'll use **logistic regression** to create a model.
+
+First, we need a formula.
+```{r}
+fmla <- as.formula("y ~ .")
+```
+
+Our response variable in this case is `y` and the rest of the variables of the dataset are predictors, denoted by `.`
+
+Now let's build a logistic regression model using the `glm` function
+```{r}
+glm_model <- glm(formula = fmla, data = bank_data, family = binomial(link = "logit"))
+```
+
+```{r}
+library(broom)
+
+glance(glm_model)
+```
+
+
+
+
+
+When working with classification models, it is often easier to compare the performance of different types of models with a standard metric such as AUC and to do so we need the response variable to be a numeric value (binary 1, 0) rather than classification (yes, no). 
+
+Let's create a new variable "subscribe" that equals 1 when y is "yes", and 0 when y is "No". 
+```{r}
+bank_data <- bank_data %>%
+  mutate(subscribe = ifelse(y =='yes', 1, 0))
+```
