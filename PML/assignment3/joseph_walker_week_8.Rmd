@@ -41,10 +41,12 @@ names(bank_data) <- str_replace_all(string = names(bank_data), pattern = '\\.', 
 
 Before we begin to build any models, we first need to split the data. We will split the data into a training set and a test set. The training set is used to build the model while the test set is used the evaluate the model performance by comparing the predicted outcomes to the actual outcomes.
 
-*Be careful not to train and test a model with the same dataset. This is known as overfitting and may cause the model to be too specific to the particular dataset you are using. Since the purpose of building a predictive model is to make accurate predictions on events that have not yet occurred (the future), we need a model that performs well in general, not just on past performance. Using a train and test set split is one way of doing this.*
+*Be careful not to train and test a model with the same dataset. This is known as overfitting and may cause the model to be too specific to the particular dataset you are using. Since the purpose of building a predictive model is to make accurate predictions on events that have not yet occurred (the future), we need a model that isn't too specifc to the data set it was built upon. This is a term known as overfitting.  Using a train and test set split is one way of doing this.*
 
 It is standard practice to partition the data using an 80/20 split: 80% of the data is used for training and 20% is used for testing.
 ```{r}
+set.seed(127)
+
 #get number of rows in the data set
 nrows <- nrow(bank_data)
 
@@ -80,6 +82,7 @@ To examine the model, we can use the `glance` function from the `broom` package.
 ```{r}
 library(broom)
 
+#examine the model terms
 glance(glm_model)
 ```
 
@@ -130,7 +133,7 @@ sensitive_matrix <-confusionMatrix(data = sensitive, reference = bank_test$y, po
 sensitive_matrix$table
 ```
 
-In converse, if we increase the probability threshold, we decrease the amount of observations classified as True Positives but we increase the certainty of these observations being right. This also improves the model's ability to correctly identify true ngatives.In this case, the model's sensitivity is low, but the specificity is high. 
+In contrast, if we increase the probability threshold, we decrease the amount of observations classified as True Positives but we increase the certainty of these observations being right. This also improves the model's ability to correctly identify true negatives. In this case, the model's sensitivity is low, but the specificity is high. 
 
 ```{r}
 #predictions with higher specificity
@@ -143,7 +146,7 @@ specific_matrix$table
 
 ## Decision Tree
 
-In this section, we'll model the data using a decision tree and look at different hyper parameters to tune the model. Tree based models are useful for making decisions or numeric predictions and have three main advantages: they are easy to use, easy to interpret, and often accurate.
+In this section, we'll model the data using a decision tree. Tree based models are useful for making decisions or numeric predictions and have three main advantages: *they are easy to use, easy to interpret, and usually accurate.* We'll also look at various hyper parameters which are like knobs we can tweak to tune the model. 
 
 To make a recursive partioning decision tree, we'll use the `rpart` package.
 
@@ -154,22 +157,24 @@ library(rpart) #for modelling decision trees
 tree_model <- rpart(formula = y ~ .,
                     data = bank_train,
                     method = "class",
-                    parms = list(split = "gini"))
+                    parms = list(split = 'gini'))
 
 
 
-tree_preds<- predict(object = tree_model,
+tree_preds <- predict(object = tree_model,
                   newdata = bank_test,
                   type = 'class')
 ```
 
-One of the hyper parameters of a decision tree we can adjust is the splitting criterion. With `rpart`, the default splitting criterion is `gini`, which is a measurement of the impurity of the partitioning. Because the purpose of a decision tree is to partition the data into groups as homogeneously as possible, it makes sense to measure the amount of impurity.  The code above was set to gini for the purpose of showing how to adjust the splitting criterion. Now, let's use the `information` splitting criterion which seeks to define the degree of disorganization in the dataset, also known as Entropy. The information split is based on the theory that less impure groups require less information to describe them. In other words, they do not have as much complexity and therefore are less disorganized.
+One of the hyper parameters of a decision tree we can adjust is the splitting criterion. With `rpart`, the default splitting criterion is `gini`, which is a measurement of the impurity of the partitioning. Because the purpose of a decision tree is to partition the data into groups as homogeneously as possible, it makes sense to measure the amount of impurity.  The code above was set to gini for the purpose of showing how to adjust the splitting criterion.  
+  
+Now, let's use the `information` splitting criterion which seeks to define the degree of disorganization in the dataset, also known as Entropy. The information split is based on the theory that less impure groups require less information to describe them. In other words, they do not have as much complexity and therefore are less disorganized.
 
 ```{r}
 tree_model2 <- rpart(formula = y ~ .,
                     data = bank_train,
                     method = "class",
-                    parms = list(split = "information"))
+                    parms = list(split = 'information'))
 
 tree_preds2 <- predict(object = tree_model2,
                   newdata = bank_test,
@@ -182,13 +187,13 @@ We can compare the models by calculating the classification error with the `ce` 
 library(ModelMetrics) # for calculating classification error
 
 #compare the classification error of the models
-paste("gini split model : ", ce(actual = bank_test$y, predicted = preds1))
-paste("information split model: ", ce(actual = bank_test$y, predicted = preds2))
+paste("gini split model : ", ce(actual = bank_test$y, predicted = tree_preds))
+paste("information split model: ", ce(actual = bank_test$y, predicted = tree_preds2))
 ```
 
-Both models perform similarly and have a classification error rate of about 9%.
+Both models perform similarly and have a classification error rate of just under 9%.  
 
-Let's examine the models in more detail with a confusion matrix.
+Now, let's examine the models in more detail with the confusion matrices.
 
 *Be careful when calling a confusion matrix because both the caret and Model Metrics packages have a confusion matrix function. While they behave similarly, the names of the arguments differ slightly and may throw you off depending which function is being called.*
 
@@ -206,23 +211,28 @@ info_matrix$overall["Accuracy"]
 info_matrix$table
 ```
 
-And finally, we can visualize the classification trees using the `rpart.plot` package.
+The model using the information split does a better job at predicting customers who will subscribe to a bank term deposit. We can say that this model has a higher sensitivity since it has a higher True Positive rate. However, this comes at the cost of having a higher false positive rate. This explains why this model has a slightly lower accuracy that the model using the gini split. 
+
+From a business standpoint, the best model depends on what you need. If the cost to be wrong is too high, you'd want a model with a higher specificity; the one with a lower false positive rate. On the other hand, if you can tolerate error, the model that identifies more true positives has a higher sensitivity and may be the right one for you.
+
+And finally, we can finish this section by visualizing the classification trees using the `rpart.plot` package.
 
 ```{r}
 library(rpart.plot) #for visualizing decision trees
 
 #visualize the gini split model classification tree
-rpart.plot(tree_model, type = 3, main= "Factors influencing whether or not \n a customer will subscribe to a bank term deposit")
+rpart.plot(tree_model, type = 3, main= "Decision tree using the 'gini' split")
 
 #visualize the information split model classification tree
-rpart.plot(tree_model2, type = 3, main= "Factors influencing whether or not \n a customer will subscribe to a bank term deposit")
+rpart.plot(tree_model2, type = 3, main= "Decision tree using the 'information split")
 ```
 
+## Other hyper parameters
 
-Another hyper paramter we can tune is the
+The other primary tuning parameters used to adjust decision trees are `minsplit`, `maxdepth`, and `complexity probability`.
 
 ```{r}
-hyperparamter <- rpart(y ~ ., data = bank_test, method = "class", control = rpart.control(minsplit = 1, maxdepth = 5))
+hyperparamter <- rpart(y ~ ., data = bank_test, method = "class", control = rpart.control(minsplit = 10, maxdepth = 5))
 
 rpart.plot(hyperparamter)
 
@@ -230,39 +240,18 @@ hyp_preds <- predict(object = hyperparamter,
                      newdata = bank_test,
                     type = "class")
 
+hyperparamter$cptable
+plotcp(hyperparamter)
 caret::confusionMatrix(data = hyp_preds, reference = bank_test$y)
 ```
 
-```{r}
-
-models <- list()
-preds <- list()
-
-for(i in 1:length(splits)){
-  splits <- c("gini", "information")
-  
-  model <- rpart(formula = y ~ ., 
-                   data = bank_test, 
-                   method = "class",
-                   parms = list(split = splits[i])
-                   )
- 
- predictions <- predict(object = model,
-                  newdata = bank_test,
-                  type = "class")
- 
- models[[i]] <- model
- preds[[i]] <- predictions
-}
-
-caret::confusionMatrix(data = preds[[1]], reference = bank_test$y)$table
-caret::confusionMatrix(data = preds[[2]], reference = bank_test$y)$table
-```
 
 ---
 ## Random Forest Model
 
+The last type of model we'll explore is the **random forest**. Random forest modeling employs a method known as ensemble modeling in which many classification trees are aggregated to find the best one. At each split of the tree, only a random subset of variables are used in order to reduce the correlation betwen sampled trees and hopefully, improve the performance of the model overall.
 
+---
 When working with classification models, it is often easier to compare the performance of different types of models with a standard metric such as AUC and to do so we need the response variable to be a numeric value (binary 1, 0) rather than classification (yes, no). 
 
 Let's create a new variable "subscribe" that equals 1 when y is "yes", and 0 when y is "No". 
