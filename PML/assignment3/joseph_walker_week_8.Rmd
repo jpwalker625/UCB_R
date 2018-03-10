@@ -319,6 +319,8 @@ Depending on the size of your data or whether you have specific classification c
 Rather than spending countless hours manually optimizing these tuning parameters, we can set up a hyper grid where we specify a range of values that we can create many models on and find the best model. Let's get to it.
 
 ```{r}
+library(svMisc) # for tracking progress of functions
+
 # Establish a list of possible values for mtry, nodesize and sampsize
 mtry <- seq(from = 4, to = ncol(bank_train) * 0.8, by = 3)
 maxnodes <- seq(from = 4, to = 12, by = 2)
@@ -332,14 +334,16 @@ oob_err <- c()
 
 # Write a loop over the rows of hyper_grid to train the grid of models
 for (i in 1:nrow(hyper_grid)) {
-
-    # Train a Random Forest model
-    model <- randomForest(formula = default ~ ., 
-                          data = bank_train,
-                          mtry = hyper_grid$mtry[i],
-                          maxnodes = hyper_grid$maxnodes[i],
-                          sampsize = hyper_grid$sampsize[i],
-                          replace = T #imperative if sample size is larger than # observations in datastet
+  #track progress
+  progress(i, progress.bar = T, char = "$")
+  
+  # Train a Random Forest model
+  model <- randomForest(formula = default ~ .,
+                        data = bank_train,
+                        mtry = hyper_grid$mtry[i],
+                        maxnodes = hyper_grid$maxnodes[i],
+                        sampsize = hyper_grid$sampsize[i],
+                        replace = T #imperative if sample size is larger than # observations in datastet
                           )
                           
     # Store OOB error for the model                      
