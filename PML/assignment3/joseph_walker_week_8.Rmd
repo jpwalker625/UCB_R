@@ -1,7 +1,7 @@
 ---
 title: "Assignment for week 8"
 author: "Joseph Walker"
-date: "March 6, 2018"
+date: "March 11, 2018"
 output: html_document
 ---
 
@@ -11,7 +11,7 @@ knitr::opts_chunk$set(echo = TRUE, eval = TRUE, warning = FALSE, message = FALSE
 
 **Use the banking telemarketing dataset bank-additional-full.csv, (in bank-additional-full.zip posted on the Files/Assignment for Week 8) to build a model that determines whether a customer will subscribe to a bank term deposit (outcome variable "y"). Use logistic regression, decision trees (with hyperparameter optimization), and random forest models to generate your results. Evaluate and compare the performance of each type of model using appropriate tools and methods (e.g., confusion matrix, ROC/AUC).**
 
-#Step 1: Import Data
+# Step 1: Import Data
 
 ```{r}
 #load tidyverse for data wrangling
@@ -19,14 +19,17 @@ library(tidyverse)
 
 #read in the data file
 bank_data <- read.csv("bank-additional-full.csv", sep = ";", header = TRUE)
-
-#examine the data
-summary(bank_data)
 ```
 
 # Step 2: Tidy, Wrangle, Transform
 
 Initially summarizing the data allows us to get a high level overview. We can see what type of variables we're dealing with (nominal or categorical), whether or not there's any missing data (NA's or NULL's), and how we may need to alter the data to work with it more efficiently.
+
+
+```{r}
+#examine the data
+summary(bank_data)
+```
 
 Fortunately, this data set is rather clean but there are a few modifications to make. I personally find periods (.) annoying in column names so let's change those.
 
@@ -39,30 +42,33 @@ names(bank_data) <- str_replace_all(string = names(bank_data), pattern = '\\.', 
 
 # Step 3: Modeling
 
-Before we begin to build any models, we first need to split the data. We will split the data into a training set and a test set. The training set is used to build the model while the test set is used the evaluate the model performance by comparing the predicted outcomes to the actual outcomes.
+Before we begin to build any models, we first need to split the data. We will split the data into a training set, a validation set, and a test set. The training set is used to build the model, the validation set is used for hyper parameter tuning, and the test set is used the evaluate the model performance.
 
-*Be careful not to train and test a model with the same dataset. This is known as overfitting and may cause the model to be too specific to the particular dataset you are using. Since the purpose of building a predictive model is to make accurate predictions on events that have not yet occurred (the future), we need a model that isn't too specifc to the data set it was built upon. This is a term known as overfitting.  Using a train and test set split is one way of doing this.*
+*Be careful not to train and test a model with the same dataset. Since the purpose of building a predictive model is to make accurate predictions on events that have not yet occurred (future outcomes), we need a model that isn't too specifc to the data set it was built upon. This is a term known as overfitting.*
 
-It is standard practice to partition the data using an 80/20 split: 80% of the data is used for training and 20% is used for testing.
+Since our dataset is fairly large, we'll use a 60/20/20 split to make the train/validation/test splits.
 ```{r}
 set.seed(127)
 
-#get number of rows in the data set
-nrows <- nrow(bank_data)
+# Randomly assign rows to ids (1/2/3 represents train/valid/test)
+# This will generate a vector of ids of length equal to the number of rows
+samp_assignment <- sample(1:3, size = nrow(bank_data), prob = c(.6, .2, .2), replace = TRUE)
 
-#create sample index for splitting
-sample <- sample.int(nrows, size = .8 * nrows, replace = FALSE)
+# Create a train, validation and tests from the original data frame 
+bank_train <- bank_data[samp_assignment == 1, ]    # subset the student data frame to training indices only
+bank_valid <- bank_data[samp_assignment == 2, ]  # subset the student data frame to validation indices only
+bank_test <- bank_data[samp_assignment == 3, ]   # subset the student data frame to test indices only
+```
 
-#split data into train and test set
-bank_train <- bank_data[sample, ]
-bank_test <- bank_data[-sample, ]
-
+And to make sure we split the data as intended:
+```{r, echo=FALSE}
 paste("number of rows in full data set:", nrow(bank_data))
 paste("Number of rows in training set: ", nrow(bank_train))
+paste("Number of rows in training set: ", nrow(bank_valid))
 paste("Number of rows in test set: ", nrow(bank_test))
 ```
 
-## Logistic Regression
+### Logistic Regression
 
 To start, let's build a model using **logistic regression**.
 
@@ -80,7 +86,7 @@ glm_model <- glm(formula = fmla, data = bank_train, family = binomial(link = "lo
 
 To examine the model, we can use the `glance` function from the `broom` package.
 ```{r}
-library(broom)
+library(broom) # for tidying models
 
 #examine the model terms
 glance(glm_model)
@@ -94,7 +100,7 @@ glm_preds <- predict(object = glm_model,
                  type = "response")
 ```
 
-Using the `prediction` function, the predicted probabilities of the response variable are computed. In our case, we have predicted the probability of a customer subscribing to a bank term deposit. In order to convert probabilities to actual class predictions, a threshold has to be set. 
+Using the `prediction` function, the predicted probabilities of the response variable are computed. In our case, we have predicted the probability of a customer subscribing to a bank term deposit. In order to convert probabilities to actual class predictions, a threshold must be set. 
 
 ```{r}
 #convert probabiities to classifications
@@ -103,16 +109,16 @@ glm_pred_class <- ifelse(glm_preds > 0.5, "yes", "no")
 #Examine the error rate with a Confusion Matrix
 library(caret)
 
-glm_matrix <- confusionMatrix(data = glm_pred_class, reference = bank_test$y, positive = "yes")
+glm_matrix <- caret::confusionMatrix(data = glm_pred_class, reference = bank_test$y, positive = "yes")
 
 glm_matrix
 ```
 
-It is useful to know that you can specify the positive predicted class with the `positive` argument. Otherwise R defaults th positive value to the first level/factor.  
+It is useful to know that the *positive predicted class* can be specified with the `positive = ` argument. Otherwise R defaults the positive value to the first level/factor. In the case of our data the default would be *no* so we should manually specify it.  
   
-The accuracy of the model is `r glm_matrix$overall['Accuracy']`.  Pretty good!
+The accuracy of the model is `r round(glm_matrix$overall['Accuracy'], digits = 3)`. That's good!
   
-Another useful statistic is the `no-information rate` which tells us how well our model would be at predicting the class probabilities purely by guessing. If the no-information rate is greater than the accuracy of the model, it's time to start looking for some better predictors!
+Another useful statistic is the `no-information rate` which tells us how well our model would be at predicting the class probabilities in the case that no predictor variables are available. This is akin to purely guessing the class predictions. If the no-information rate is greater than the accuracy of the model, it's time to start looking for some better predictors!
 
 ```{r}
 #Is the Accuracy better than the NIR?
@@ -122,33 +128,43 @@ glm_matrix$overall["Accuracy"] > glm_matrix$overall["AccuracyNull"]
 glm_matrix$overall["AccuracyPValue"]
 ```
 
-This threshold can be modified to change the sensitivity and specificity of the model depending on what your purpose is. For example, if we decrease the probability threshold, we allow more observation to be classified as a True Positive value, therefore increasing the sensitivity of the model. This comes at the cost of decreasing the specificity of the model since the false positive rate increases.
+This threshold can be modified to change the sensitivity and specificity of the model depending on what your purpose is. If we decrease the probability threshold, we allow more observations to be classified as **true positives**, which increases the **sensitivity** of the model. This comes at the cost of decreasing the **specificity** of the model since the **false positive** rate increases.
 
 ```{r}
 #predictions with higher sensitivity
 sensitive <- ifelse(glm_preds > .1, "yes", "no")
 
-sensitive_matrix <-confusionMatrix(data = sensitive, reference = bank_test$y, positive = "yes")
+sensitive_matrix <- caret::confusionMatrix(data = sensitive, reference = bank_test$y, positive = "yes")
 
 sensitive_matrix$table
 ```
 
-In contrast, if we increase the probability threshold, we decrease the amount of observations classified as True Positives but we increase the certainty of these observations being right. This also improves the model's ability to correctly identify true negatives. In this case, the model's sensitivity is low, but the specificity is high. 
+In contrast, if we increase the probability threshold, we decrease the amount of observations classified as **true positives** but we increase the certainty of these observations being right. This also improves the model's ability to correctly identify **true negatives**. In this case, the model's sensitivity decreases, and the specificity increases.
 
 ```{r}
 #predictions with higher specificity
 specific <- ifelse(glm_preds > .9, "yes", "no")
 
-specific_matrix <- confusionMatrix(specific, bank_test$y, positive = "yes")
+specific_matrix <- caret::confusionMatrix(specific, bank_test$y, positive = "yes")
 
 specific_matrix$table
 ```
 
-## Decision Tree
+To finish up with this model, we'll calculate the **area under the curve (AUC)**, of the receiver operating characteristic curve which is a metric we can use to compare the performance of different types of models. We'll store the auc value for now and compare it to the other model's aucs later.
 
-In this section, we'll model the data using a decision tree. Tree based models are useful for making decisions or numeric predictions and have three main advantages: *they are easy to use, easy to interpret, and usually accurate.* We'll also look at various hyper parameters which are like knobs we can tweak to tune the model. 
+*AUC can be calcualted with the `ModelMetrics` package.*
+```{r}
+library(ModelMetrics)
 
-To make a recursive partioning decision tree, we'll use the `rpart` package.
+#AUC for the logistic regression model
+glm_auc <- auc(actual = bank_test$y, predicted = glm_preds)
+```
+
+### Decision Tree
+
+In this section, we'll model the data using a decision tree. Tree based models are useful for making decisions or numeric predictions and have three main advantages: **they are easy to use, easy to interpret, and usually accurate.** We'll also look at various hyper parameters which are like knobs we can tweak to tune the model. 
+
+To make a recursive partion decision tree, we'll use the `rpart` package. One of the hyper parameters of a decision tree we can adjust is the **split criterion**. The purpose of a decision tree is to partition the data into groups as homogeneously as possible. The more hetergeneous a group is, the more impure it is. The measurement of this impurity is `gini` and is the default split criterion used in the `rpart` model function.
 
 ```{r}
 library(rpart) #for modelling decision trees
@@ -166,8 +182,6 @@ tree_preds <- predict(object = tree_model,
                   type = 'class')
 ```
 
-One of the hyper parameters of a decision tree we can adjust is the splitting criterion. With `rpart`, the default splitting criterion is `gini`, which is a measurement of the impurity of the partitioning. Because the purpose of a decision tree is to partition the data into groups as homogeneously as possible, it makes sense to measure the amount of impurity.  The code above was set to gini for the purpose of showing how to adjust the splitting criterion.  
-  
 Now, let's use the `information` splitting criterion which seeks to define the degree of disorganization in the dataset, also known as Entropy. The information split is based on the theory that less impure groups require less information to describe them. In other words, they do not have as much complexity and therefore are less disorganized.
 
 ```{r}
@@ -181,19 +195,31 @@ tree_preds2 <- predict(object = tree_model2,
                   type = 'class')
 ```
 
-We can compare the models by calculating the classification error with the `ce` function from the `ModelMetrics` package. The classification error can be calculated as:  $$ false\ positives\ +\ false\ negatives \over total\ observations$$
+We can visualize the decision trees using the `rpart.plot` package.
+
+```{r}
+library(rpart.plot) #for visualizing decision trees
+
+#visualize the gini split model classification tree
+rpart.plot(tree_model, type = 3, main= "Decision tree using the 'gini' split")
+
+#visualize the information split model classification tree
+rpart.plot(tree_model2, type = 3, main= "Decision tree using the 'information split")
+```
+
+We can compare the models by calculating the **classification error** with the `ce` function from the `ModelMetrics` package. The classification error can be calculated as:  $$ false\ positives\ +\ false\ negatives \over total\ observations$$
 
 ```{r}
 library(ModelMetrics) # for calculating classification error
 
 #compare the classification error of the models
-paste("gini split model : ", ce(actual = bank_test$y, predicted = tree_preds))
-paste("information split model: ", ce(actual = bank_test$y, predicted = tree_preds2))
+paste("gini split model : ", round(ce(actual = bank_test$y, predicted = tree_preds) * 100, digits = 2), "%", sep = "")
+paste("information split model: ", round(ce(actual = bank_test$y, predicted = tree_preds2)* 100, digits = 2),"%", sep = "")
 ```
 
-Both models perform similarly and have a classification error rate of just under 9%.  
+Both models perform similarly and have a classification error rate of just over 9%.  
 
-The classification error is also $$ 1- accuracy $$ which can be calcualted as: $$ true\ positives\ +\ false\ negatives \over total\ observations$$
+The classification error is also: *1- accuracy* which can be calcualted as: $$ true\ positives\ +\ true\ negatives \over total\ observations$$
 
 Rather than having to do the math each time, we can obtain the accuracy from the confusion matrix function.
 
@@ -215,47 +241,101 @@ info_matrix$overall["Accuracy"]
 info_matrix$table
 ```
 
-The model using the information split does a better job at predicting customers who will subscribe to a bank term deposit. We can say that this model has a higher sensitivity since it has a higher True Positive rate. However, this comes at the cost of having a higher false positive rate. This explains why this model has a slightly lower accuracy that the model using the gini split. 
+From a practical standpoint, the accuracy of the models is about the same. The model using the information split does a slightly better job at predicting customers who will subscribe to a bank term deposit. We can say that this model has a higher sensitivity since it has a higher true positive rate. However, this comes at the cost of having a higher false positive rate. This explains why this model has a slightly lower accuracy that the model using the gini split. 
 
-From a business standpoint, the best model depends on what you need. If the cost to be wrong is too high, you'd want a model with a higher specificity; the one with a lower false positive rate. On the other hand, if you can tolerate error, the model that identifies more true positives has a higher sensitivity and may be the right one for you.
+From a business standpoint, the right model depends on your tolerance for predicting incorrectly. If the cost to be wrong is too high, you'd want a model with a higher specificity; you'll have less true positives but you'll be more confident in the probability that they are right. On the other hand, if you can tolerate more error, the model that identifies more true positives (at the cost of more false positives) has a higher sensitivity and may be the right one for you.
 
-And finally, we can finish this section by visualizing the classification trees using the `rpart.plot` package.
+### Other hyper parameters
 
-```{r}
-library(rpart.plot) #for visualizing decision trees
+The other primary tuning parameters used to adjust decision trees are **minsplit, maxdepth,** and **complexity probability (cp)**.
 
-#visualize the gini split model classification tree
-rpart.plot(tree_model, type = 3, main= "Decision tree using the 'gini' split")
-
-#visualize the information split model classification tree
-rpart.plot(tree_model2, type = 3, main= "Decision tree using the 'information split")
-```
-
-## Other hyper parameters
-
-The other primary tuning parameters used to adjust decision trees are **minsplit, maxdepth,** and **complexity probability**.
+Rather than manually tweaking each parameter manually in a process of trial and error, we can use a hyper grid to iterate over combinations of hyper paramaters to find the optimized model in an efficient manner.
 
 ```{r}
-hyperparamter <- rpart(y ~ ., data = bank_test, method = "class", control = rpart.control(minsplit = 10, maxdepth = 5))
+minsplit <- c(1, 500, 1000, 1500)
+maxdepth <- seq(from = 3, to = 12, by = 3)
 
-rpart.plot(hyperparamter)
+hypergrid <- expand.grid(minsplit = minsplit, maxdepth = maxdepth)
 
-hyp_preds <- predict(object = hyperparamter,
-                     newdata = bank_test,
-                    type = "class")
+tree_models <- list()
 
-hyperparamter$cptable
-plotcp(hyperparamter)
-caret::confusionMatrix(data = hyp_preds, reference = bank_test$y )
+for(i in 1:nrow(hypergrid)){
+  mycontrol <- rpart.control(minsplit = hypergrid$minsplit[i], 
+                             maxdepth = hypergrid$maxdepth[i])
+  
+  tree_models[[i]] <- rpart(formula = y ~ ., 
+                 data = bank_train, 
+                 method = "class", 
+                 control = mycontrol)
+}
 ```
 
+Now that we have `r nrow(hypergrid)` models, our goal is to find the model with the best performance. To do so, we'll use the validation data set to make predictions on each of the models and use the classification error metric to compare them. The model with the lowest classification error is our winner.
+
+```{r}
+#create an empty vector to store the CE rates
+class_errors <- c()
+
+#loop over the models to make predictions and calculate the CE
+for(i in 1:length(tree_models)){
+  
+  #retrieve the i'th model
+  model <- tree_models[[i]]
+  
+  #make predictions on the i'th model
+  predictions <- predict(object = model,
+                         newdata = bank_valid, 
+                         type = "class")
+  
+  #save i'th model classification error to class_errors vector
+  class_errors[i] <- ce(actual = bank_valid$y, predicted = predictions)
+}
+
+#identify best tree model that give the lowest classification error
+best_tree <- tree_models[[which.min(class_errors)]]
+
+#examine the best tree model parameters
+best_tree$control
+```
+
+The results of tuning the hyper parameters indicate that a **minsplit** value of `r best_tree$control$minsplit` and **maxdepth** value of `r best_tree$control$maxdepth` return a decision tree model with a classification error rate of `r round(min(class_errors) * 100, digits = 2)`. This is a decent improvement over the models we created earlier using the split type as the tuning parameter.
+
+Finally, we'll utilize the best_model to make predictions on the test dataset.
+
+```{r}
+#use best model to make predictions on test set
+best_tree_preds <- predict(object = best_tree,
+                           newdata = bank_test,
+                           type = "class")
+
+#calculate the classification error rate
+best_ce <- ce(actual = bank_test$y, predicted = best_tree_preds) 
+```
+
+After all that work, our optimized model returns a classification error rate of `r round(best_ce * 100, digits = 2)`%. While this may not be much better than the earlier models, it's important to examine the confusion matrix to see how it classifies true positives and true negatives. As we discussed earlier, the model may be more or less desireable depending on the classification error type rates that fit your needs.
+
+```{r}
+best_cm <- caret::confusionMatrix(data = best_tree_preds, reference = bank_test$y, positive = "yes")
+
+best_cm$overall["Accuracy"]
+best_cm$table
+
+rpart.plot(best_tree, main = "Optimized Hyper Parameter Decision Tree")
+```
+
+Now let's calculate the AUC for the decision tree model.
+```{r}
+#auc for decision tree model
+dt_auc <- auc(actual = bank_test$y, predicted = best_tree_preds)
+```
 
 ---
-## Random Forest Model
 
-The last type of model we'll explore is the **random forest**. Random forest modeling employs a method known as ensemble modeling in which many classification trees are aggregated to find the best one. At each split of the tree, only a random subset of variables are used in order to reduce the correlation betwen sampled trees and hopefully, improve the performance of the model overall.
+### Random Forest Model
 
-Each tree in a random forest model is created using a bootstrapped sample of the dataset used to train the model. In order to compare all the trees of the model, random forests compute the **out of bag error rate** for each tree by testing the data that was not included in the bootstrapped sample (this is know as out of bag data) and comparing it to the true classification vlaues to calculate the classification error.
+The last type of model we'll explore is the **random forest**. Random forest modeling uses the ensemble method in which many classification trees are built and aggregated to find the best one. At each split of the tree, only a random subset of variables are used in order to reduce the correlation between sampled trees.
+
+Each tree in a random forest model is created using a bootstrapped sample of the dataset used to train the model. In order to compare all the trees of the model, random forests compute the **out of bag error rate** for each tree by testing the data that was not included in the bootstrapped sample (this is know as out of bag data) and comparing it to the true classification values to calculate the classification error.
 
 To make a random forest model, we'll use the `randomForest` package but be aware that you can also use the `ranger` package. 
 
@@ -263,6 +343,7 @@ As a reminder, each tree in a random forest is made using a random bootstrapped 
 ```{r}
 #load the random Forest package
 library(randomForest)
+
 #set the seed for reproducibility
 set.seed(3918)
 
@@ -272,7 +353,7 @@ rf_model <- randomForest(formula = y ~ ., data = bank_train)
 rf_model
 ```
 
-Right out of the box, or rather, out of the bag I should say, the random forest model estimates an out of bag error rate of 8.4%. The confusion matrix indicates that the model is more specific than it is sensitive. 
+Right out of the box, or rather, out of the bag I should say, the random forest model estimates an out of bag error rate of `r round(rf_model$err.rate[500] * 100, digits = 3)`%. The confusion matrix indicates that the model is more specific than it is sensitive since the **true negative** rate is much greater than the **true positive** rate.
 
 Like the models we trained in earlier sections, random forest also have hyper parameters we can tune:  
   
@@ -294,7 +375,7 @@ legend(x = "right",
        fill = 1:ncol(rf_model$err.rate))
 ```
 
-As the plot shows, the model reaches a minimum error rate at around 100 trees so it doesn't really make sense for us to tweak the **ntree** parameter.
+Generally, we can improve the model with a greater number of trees but this comes at the cost of the time it takes to generate the model. The default value is set to 500. As the plot shows, the model reaches a minimum error rate at less than 100 trees so it doesn't really make sense for us to tweak the **ntree** parameter.
 
 As for the **mtry** hyper parameter, the `randomForest` package has a specific function for optimizing the mtry value and that is `tuneRF()`. The function starts with the default mtry value and iterates stepwise by some specified value in the left and right direction to find the mtry value that leads to the lowest OOB error estimate. 
 
@@ -303,69 +384,114 @@ As for the **mtry** hyper parameter, the `randomForest` package has a specific f
 set.seed(57)
 
 #optimize the mtry hyper paramter with tuneRF
-tuneRF(x = select(bank_train, -y),
+tuned_mtry_rf <- tuneRF(x = select(bank_train, -y),
                      y = bank_train$y, 
                      ntreeTry = 500, 
                      plot = T, #defaults to True 
                      doBest = T #defaults to False
 )
 
+tuned_mtry_rf
 ```
 
-The **sampsize** is a bit tricky. By default, the `randomForest` model algorithm uses a bootstrap sample apporach meaning the sample size is equal to the size of the dataset used to train the model. Furthermore, it uses bootstrap sampling with replacement to generate the randomness of the sampling for each tree. In general, this default method is sufficient but we can customize it. Of course, there are drawbacks. If we use a smaller sample size, we increase the variation in each tree, but we may sacrifice performance of the model. On the other hand, increasing the sample size will lead to less randomness and may lead to overfitting.
+So it appears that an mtry of 4 gives us the lowest OOB error rate. Let's continue looking at the other parameters.
+
+The **sampsize** is a bit tricky. By default, the `randomForest` model algorithm uses a bootstrap sample approach where the n of the sample is equal the number of observations in the dataset. Furthermore, it uses sampling with replacement to generate the randomness of the sampling for each tree. In general, this default method is sufficient but we can specify the number of samples used. Of course, there are drawbacks. If we use a smaller sample size, we increase the variation in each tree, but we may sacrifice performance of the model. On the other hand, increasing the sample size will lead to less randomness and may lead to overfitting.
 
 Depending on the size of your data or whether you have specific classification criteria you have in mind, it may or may not makes sense to tune the **nodesize** and **maxnodes**. 
 
-Rather than spending countless hours manually optimizing these tuning parameters, we can set up a hyper grid where we specify a range of values that we can create many models on and find the best model. Let's get to it.
+Again, we can set up a hyper grid to build a list of models trying all the different combinations of hyper paramters we specify. 
 
 ```{r}
-library(svMisc) # for tracking progress of functions
-
-# Establish a list of possible values for mtry, nodesize and sampsize
-mtry <- seq(from = 4, to = ncol(bank_train) * 0.8, by = 3)
-maxnodes <- seq(from = 4, to = 12, by = 2)
-sampsize <- nrow(bank_train) * c(0.5, 1, 1.5)
+#utilize the optimized mtry value above and
+# establish a list of possible values for nodesize
+mtry <- 4
+maxnodes <- seq(from = 5, to = 13, by = 2)
+sampsize <- floor(nrow(bank_train) * c(.5, .8))
 
 # Create a data frame containing all combinations 
 hyper_grid <- expand.grid(mtry = mtry, maxnodes = maxnodes, sampsize = sampsize)
 
-# Create an empty vector to store OOB error values
-oob_err <- c()
+# Create an empty list to store the models
+rf_models <- list()
+
+#set seed for reproducibility
+set.seed(99)
 
 # Write a loop over the rows of hyper_grid to train the grid of models
-for (i in 1:nrow(hyper_grid)) {
-  #track progress
-  progress(i, progress.bar = T, char = "$")
+for (i in 1:nrow(hyper_grid)){
   
   # Train a Random Forest model
-  model <- randomForest(formula = default ~ .,
+  rf_models[[i]] <- randomForest(formula = y ~ .,
                         data = bank_train,
-                        mtry = hyper_grid$mtry[i],
+                        mtry = mtry,
                         maxnodes = hyper_grid$maxnodes[i],
                         sampsize = hyper_grid$sampsize[i],
-                        replace = T #imperative if sample size is larger than # observations in datastet
-                          )
-                          
-    # Store OOB error for the model                      
-    oob_err[i] <- model$err.rate[nrow(model$err.rate), "OOB"]
+                        replace = T)
 }
-
-# Identify optimal set of hyperparmeters based on OOB error
-opt_i <- which.min(oob_err)
-print(hyper_grid[opt_i,])
 ```
 
+Now let's identify the optimal hyper parameters by choosing the model with the lowest OOB error rate.
 
-It's also important to keep in mind the goals/costs of the problem you're working on. A model with 90% accuracy rate might be good enough for some. But in our case, the difference between predicting 90% accuracy vs. 91% accuracy the amount of customers who will subscribe to a bank term deposit may cost millions of dollars for the company and is worth the small yet crucial gain in model performance.
+```{r}
+#extract the minimum OOB error rates for each model
+rf_oobs <- unlist(map(.x = rf_models, .f = function(x) x$err.rate[nrow(hyper_grid), 'OOB']))
 
+#get the hyper parameters corresponding to the model with the lowest OOB error rate
+hyper_grid[which.min(rf_oobs), ]
+```
 
+And now we can look at the model that utilizes these hyper parameters.
+```{r}
+#get the model that has the minimum oob
+best_rf <- rf_models[[which.min(rf_oobs)]]
 
+#examine the best random forest model
+best_rf
+```
+
+Finally, let's calculate the AUC for the random forest model. Since we have not made predictions on the test set with the random forest model yet, let's do that first.
+
+```{r}
+#make predictions on test dataset using the tuned_mtry_rf model.
+rf_preds <- predict(object = tuned_mtry_rf,
+                    newdata = bank_test)
+
+#calculate auc for the rf predictions
+rf_auc <- auc(actual = bank_test$y, predicted = rf_preds)
+```
 
 ---
-When working with classification models, it is often easier to compare the performance of different types of models with a standard metric such as AUC and to do so we need the response variable to be a numeric value (binary 1, 0) rather than classification (yes, no). 
 
-Let's create a new variable "subscribe" that equals 1 when y is "yes", and 0 when y is "No". 
+# Step 4: Comparing Models
+
+Throughout this assignment, we've explored different types of models: logistic regression, decision trees, and random forests. Within these model types, we've explored different hyper parameters while seeking to improve the various models. Now it's time to compare the models to each other. In order to do so, we need a metric that normalizes the model performance to a relative scale. We'll use the area under the curve (AUC), which we've alread calculated for each model.
+
 ```{r}
-bank_data <- bank_data %>%
-  mutate(subscribe = ifelse(y =='yes', 1, 0))
+sprintf("logistic regression model test AUC: %.3f", glm_auc)
+sprintf("recursive partitioning decision tree test AUC: %.3f", dt_auc)
+sprintf("random forest model test AUC: %.3f", rf_auc)
 ```
+
+And there you have it. The logistic regression model takes the cake. In the final feature, let's visualize the model performance with the ROC curves. 
+```{r}
+#load the ROCR package
+library(ROCR)
+
+# List of predictions
+preds_list <- list(glm_preds, best_tree_preds, rf_preds)
+
+# List of actual values (same for all)
+m <- length(preds_list)
+
+actuals_list <- rep(list(bank_test$y), m)
+
+# Plot the ROC curves
+pred <- prediction(predictions = preds_list, labels = actuals_list)
+rocs <- performance(prediction.obj = pred, measure = "tpr", x.measure = "fpr")
+plot(rocs, col = as.list(1:m), main = "Test Set ROC Curves")
+legend(x = "bottomright", 
+       legend = c("logit regression model", "Decision Tree", "Random Forest"),
+       fill = 1:m)
+```
+
