@@ -1,0 +1,145 @@
+---
+title: "test"
+author: "Joseph Walker"
+date: "3/26/2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = T, warning = F, message = F, eval = T, cache = T)
+```
+
+# Problem 1
+
+**Use the dataset birth_data.csv to build a model that determines whether a baby is at risk, i.e., needs immediate emergency care or extra medical attention immediately upon birth.**
+  
+*Requirements*
+  
+* Use caret for your solution, see:https://topepo.github.io/caret/  
+* Use caret-based data preparation to prepare the data for your models.
+* Use caret to fit (1) logistic regression and (2) GBM models.
+* Use caret to tune your models appropriately.
+* Use caret (and other methods, if desired) to evaluate and compare the performance of each type of model using appropriate methods (e.g., confusion matrix, ROC, AUC).
+
+Let's begin by loading the dataset.
+
+```{r}
+#load required packages
+library(tidyverse)
+library(caret)
+library(ggplot2)
+
+#read in dataset
+birth_data <- read_csv(file = "birth_data.csv")
+
+#examine the dataset
+glimpse(birth_data)
+```
+
+There are two variables with a character data type. Let's take a look at these variables more closely to see.
+
+```{r}
+birth_data %>%
+  select(GESTREC3, DPLURAL) %>%
+  distinct()
+```
+
+Because there are only two and three categories for each variable, respectively, it would better suit us to convert these variables to factors.
+
+```{r}
+birth_data <- within(birth_data, {
+  GESTREC3 <- factor(GESTREC3)
+  DPLURAL <- factor(DPLURAL)
+})
+
+#convert var names to lower case
+names(birth_data) <- tolower(names(birth_data))
+```
+
+And one more thing we can do to make the dependent variable clearer for modeling purposes is to change the FALSE/TRUE to No/Yes. This will help down the road when we want to convert our classes into class probabilities for comparing models using performance metrics such AUC.
+
+```{r}
+#convert T/F to Yes/No
+birth_data$atrisk <- ifelse(birth_data$atrisk == TRUE, "Yes", "No")
+
+#convert atrisk to factor
+birth_data$atrisk <- factor(birth_data$atrisk)
+```
+
+Now that we've cleaned up the variables, let's examine the dataset at a high level.
+
+```{r}
+summary(birth_data)
+```
+
+It looks like we're working with a clean data set; no missing values (NA's) or obvious discrepancies.
+
+As is good modeling practice, first we begin by splitting our data set into a training and test set.
+
+```{r}
+#set seed for reproducibility
+set.seed(1849)
+
+#create training index vector
+train_index <- createDataPartition(y = birth_data$atrisk, p = .8, list = F)
+
+#create training set
+birth_train <- birth_data[train_index, ]
+
+#create test set
+birth_test <- birth_data[-train_index, ]
+```
+
+## Logistic Regression
+
+We'll start by building a logistic regression model.
+
+```{r}
+#create train control object
+glm_control <- trainControl(method = "cv", number = 10)
+
+#build the model
+glm_model <- train(atrisk ~ ., method = "glm", data = birth_train, family= "binomial", trControl = glm_control, trace = F)
+
+#examine the model
+glm_model
+```
+
+Using 10 fold cross-validation, we were able to build a model with an accuracy of `r paste(round(glm_model$results$Accuracy * 100, 2), '%')`
+
+Now let's apply the model performs on the test set.
+
+```{r}
+#make predictions on test set using glm model
+glm_predictions <- predict(glm_model, newdata = birth_test)
+
+#create Confusion Matrix
+caret::confusionMatrix(glm_predictions, reference = birth_test$atrisk, positive = "Yes")
+```
+
+Again, the model results in a high accuracy of ~98% on the test set. Looking at the confusion matrix, one can gather that the model has a high specificity meaning that it does an excellent job at predicting cases where babies are not at risk at birth (True Negatives). On the other hand, the model has a very low sensitivity and predicts only 1 of the 96 total cases of babies being at risk correctly. This is obviously not a good thing as this could have life and death consequences for the cases of babies who truly are at risk but were not classified as such by the model.
+
+## Gradient Boosting Machines
+
+Let's move on to some different models to see how they stack up against the GLM. In this section, we'll continue using the `caret` package to make 2 **Gradient Boosting Machine** models. 
+
+First we'll start with a basic **Generalized Boosted Regression - GBM** model. To start, we'll make a train control object to specify that we want a 10-fold cross-validation repeated 10 times. 
+
+```{r}
+#set seed for reproducibility
+set.seed(5964)
+
+#create train control for gbm
+gbm_control <- trainControl(method = "repeatedcv", number = 10, repeats = 10)
+
+#build gbm model
+gbm_model <- train(atrisk ~ ., data = birth_train, method = "gbm", trControl = gbm_control, verbose = F)
+
+
+#visualize the model
+ggplot(gbm_model) +
+  labs(title = "GBM Model Results", subtitle = "10 Fold CV, Repeated 10 Times")
+
+#examine the best tuning parameters
+gbm_model$bestTune
+```

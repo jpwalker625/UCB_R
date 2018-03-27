@@ -1,0 +1,100 @@
+---
+title: "problem2"
+author: "Joseph Walker"
+date: "3/26/2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = F, message = F)
+library(tidyverse)
+```
+
+# Problem 2
+
+**Use the dataset ocdata.csv having the following fields - education, income, women, prestige, census, type - to answer the questions below.**
+
+**(Problem 2A) Fit a univariate OLSR (Ordinary Least Squares Regression) model, adhering to OLSR assumptions, predicting income from prestige only.**
+  
+**(Problem 2B) Fit a model of any type we discussed in class, using all meaningful predictors of income, to obtain the "best" results, using whatever method you wish. Use of caret for Problem 2 may be helpful, but is not required. Be sure to properly prepare your data, take steps to avoid overfitting, tune and evaluate the performance of your model, and provide a clear description and analysis of your results. Caution: for your solution, more is not better. Use only an appropriate model and methods that provides value. Avoid unnecessary work. Also, pay attention to the appearance and quality of your HTML product: attractive, crisp, and clear.**
+
+First we'll begin by importing the data set.
+
+```{r}
+#read in the dataset
+ocdata <- read_csv("ocdata.csv")
+
+#examine the dataset
+glimpse(ocdata)
+```
+
+The only variable that is not numeric is `type`. Let's take a closer look at this variable to see if we need to convert it to a categorical variable (factor).
+
+```{r}
+#examine the distinct values in the type variable
+ocdata %>%
+  select(type) %>%
+  distinct()
+
+#make the type variable a factor
+ocdata$type <- factor(ocdata$type)
+```
+
+Now let's summarize the data to look for anything that might stick out immediately.
+
+```{r}
+summary(ocdata)
+```
+
+There are four NA's in the type variable. We'll leave these in for now, but if they prove to be problematic for some reason, we'll come back to filter them out.
+
+## OLSR
+
+Our first task is to build an ordinary least squares regression model predicting income using only the prestige variable. Before we begin, let's first visualize the relationship between the two variables to make sure there's a linear relationship.
+
+```{r}
+ggplot(ocdata, aes(x = prestige, y = income)) +
+  geom_point() +
+  geom_smooth(method = "lm")
+```
+
+Aha! Good thing we checked this basic but necessary assumption. It looks like there's something going on at the extreme end of the dataset where income increases much more dramatically at the highest levels of prestige.
+
+To fix this, we can transform the data using a log transformation. Let's take a look.
+```{r}
+ggplot(ocdata, aes(x = log10(prestige), y = log10(income))) +
+  geom_point() +
+  geom_smooth(method = "lm")
+```
+
+
+```{r}
+library(modelr)
+library(broom)
+
+#create linear model
+ols <- lm(formula = income ~ prestige, data = ocdata)
+
+#augment the dataset using the ols model
+ols_augmented <- augment(x = ols)
+
+head(ols_augmented)
+```
+
+```{r}
+log_trans_ols <- lm(log10(income) ~ log10(prestige), data = ocdata)
+
+glance(log_trans_ols)
+
+log_trans_augmented <- augment(log_trans_ols)
+
+log_trans_augmented
+ggplot(data= log_trans_augmented, aes(x = .fitted, y = .resid)) +
+  geom_point()
+
+ggplot(log_trans_augmented, aes(x = 10**.fitted, y = 10**log10.income.))+
+  geom_point()
+
+num <- log10(10)
+```
+

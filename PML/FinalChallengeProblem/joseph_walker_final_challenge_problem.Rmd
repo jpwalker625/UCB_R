@@ -1,0 +1,306 @@
+---
+title: "Final Challenge Problem"
+author: "Joseph Walker"
+date: "3/28/2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = T, warning = F, message = F, eval = T, cache = T)
+```
+
+# Problem 1
+
+**Use the dataset birth_data.csv to build a model that determines whether a baby is at risk, i.e., needs immediate emergency care or extra medical attention immediately upon birth.**
+  
+*Requirements*
+  
+* Use caret for your solution, see:https://topepo.github.io/caret/  
+* Use caret-based data preparation to prepare the data for your models.
+* Use caret to fit (1) logistic regression and (2) GBM models.
+* Use caret to tune your models appropriately.
+* Use caret (and other methods, if desired) to evaluate and compare the performance of each type of model using appropriate methods (e.g., confusion matrix, ROC, AUC).
+
+Let's begin by loading the dataset.
+
+```{r}
+#load required packages
+library(tidyverse)
+library(caret)
+library(ggplot2)
+
+#read in dataset
+birth_data <- read_csv(file = "birth_data.csv")
+
+#examine the dataset
+glimpse(birth_data)
+```
+
+There are two variables with a character data type. Let's take a look at these variables more closely to see.
+
+```{r}
+birth_data %>%
+  select(GESTREC3, DPLURAL) %>%
+  distinct()
+```
+
+Because there are only two and three categories for each variable, respectively, it would better suit us to convert these variables to factors.
+
+```{r}
+birth_data <- within(birth_data, {
+  GESTREC3 <- factor(GESTREC3)
+  DPLURAL <- factor(DPLURAL)
+})
+
+#convert var names to lower case
+names(birth_data) <- tolower(names(birth_data))
+```
+
+And one more thing we can do to make the dependent variable clearer for modeling purposes is to change the FALSE/TRUE to No/Yes. This will help down the road when we want to convert our classes into class probabilities for comparing models using performance metrics such AUC.
+
+```{r}
+#convert T/F to Yes/No
+birth_data$atrisk <- ifelse(birth_data$atrisk == TRUE, "Yes", "No")
+
+#convert atrisk to factor
+birth_data$atrisk <- factor(birth_data$atrisk)
+```
+
+Now that we've cleaned up the variables, let's examine the dataset at a high level.
+
+```{r}
+summary(birth_data)
+```
+
+It looks like we're working with a clean data set; no missing values (NA's) or obvious discrepancies.
+
+As is good modeling practice, first we begin by splitting our data set into a training and test set.
+
+```{r}
+#set seed for reproducibility
+set.seed(1849)
+
+#create training index vector
+train_index <- createDataPartition(y = birth_data$atrisk, p = .8, list = F)
+
+#create training set
+birth_train <- birth_data[train_index, ]
+
+#create test set
+birth_test <- birth_data[-train_index, ]
+```
+
+## Logistic Regression
+
+We'll start by building a logistic regression model.
+
+```{r}
+#create train control object
+glm_control <- trainControl(method = "cv", number = 10)
+
+#build the model
+glm_model <- train(atrisk ~ ., method = "glm", data = birth_train, family= "binomial", trControl = glm_control, trace = F)
+
+#examine the model
+glm_model
+```
+
+Using 10 fold cross-validation, we were able to build a model with an accuracy of `r paste(round(glm_model$results$Accuracy * 100, 2), '%')`
+
+Now let's apply the model performs on the test set.
+
+```{r}
+#make predictions on test set using glm model
+glm_predictions <- predict(glm_model, newdata = birth_test)
+
+#create Confusion Matrix
+caret::confusionMatrix(glm_predictions, reference = birth_test$atrisk, positive = "Yes")
+```
+
+Again, the model results in a high accuracy of ~98% on the test set. Looking at the confusion matrix, one can gather that the model has a high specificity meaning that it does an excellent job at predicting cases where babies are not at risk at birth (True Negatives). On the other hand, the model has a very low sensitivity and predicts only 1 of the 96 total cases of babies being at risk correctly. This is obviously not a good thing as this could have life and death consequences for the cases of babies who truly are at risk but were not classified as such by the model.
+
+## Gradient Boosting Machines
+
+Let's move on to some different models to see how they stack up against the GLM. In this section, we'll continue using the `caret` package to make 2 **Gradient Boosting Machine** models. 
+
+First we'll start with a basic **Generalized Boosted Regression - GBM** model. To start, we'll make a train control object to specify that we want a 10-fold cross-validation repeated 10 times. 
+
+```{r}
+#set seed for reproducibility
+set.seed(5964)
+
+#create train control for gbm
+gbm_control <- trainControl(method = "repeatedcv", number = 10, repeats = 10, verboseIter = F)
+
+#build gbm model
+gbm_model <- train(atrisk ~ ., data = birth_train, method = "gbm", trControl = gbm_control, verbose = F)
+
+#visualize the model
+ggplot(gbm_model) +
+  labs(title = "GBM Model Results", subtitle = "10 Fold CV, Repeated 10 Times")
+
+#examine the best tuning parameters
+gbm_model$bestTune
+```
+
+As the model indicates, the best tuning parameters attain a model with an accuracy of `r paste(round(max(gbm_model$results$Accuracy) * 100, 2), '%')`
+
+Once again, let's apply this model to the test set.
+```{r}
+#make predictions on test set using gbm model
+gbm_predictions <- predict(gbm_model, birth_test)
+
+#make confusion matrix to compare predicted vs. actual
+caret::confusionMatrix(data = gbm_predictions, reference = birth_test$atrisk, positive = "Yes")
+```
+
+It looks like we were able to improve the **sensitivity** using GBM! The number of at risk births the model was able to identify (True Positives) increased from 1/96 in the glm model to 12/96. It's a good start but it's still not good enough! 
+
+The model we built above was rather basic in that we didn't tune any of the custom parameters available to us. Let's explore some of these options to see if we can improve upon the model.
+
+First, we need to see what tuning parameters are available with the gbm:
+
+```{r}
+#lookup the gbm model
+modelLookup("gbm")
+```
+
+The relevant tuning parameters we'll want to customize here are *n.trees* - how many trees or ensembles the model will iterate over - and *interaction.depth* - the max depth, or number of branches each tree will develop to find the best classification criteria. 
+
+First we'll build a train control specifiying cross-fold validation. Then we'll create a custom tuning grid specifying the various parameters we want to test. 
+
+In this scenario, I am going to change the outcomes from predictions to predicted probabilities of the outcome. This way, we can manually set a threshold on the predicted probabilities of the test set so that we can adjust the predicted outcomes based on the probabilities. In addition, the best model will be chosen on the highest ROC instead of accuracy. The sensitivity and specificity values will also be given which gives us an opportunity to pick a model that suits are needs better.
+
+
+```{r}
+#set seed for reproducibility
+set.seed(952)
+
+#create 10 fold CV train control
+custom_gbm_control <- trainControl(method = "cv", number = 10, classProbs = T, summaryFunction = twoClassSummary, verboseIter = F)
+
+#define tuning parameter values
+n.trees <- (2:10) * 50
+depth <- c(2, 6, 10, 14, 18)
+shrinkage <- 0.1 #default value
+minobs <- 10
+
+#create fully crossed grid of tuning parameters
+gbm_grid <- expand.grid(n.trees = n.trees, interaction.depth = depth, shrinkage = shrinkage, n.minobsinnode = minobs)
+
+#build custom gbm model
+custom_gbm_model <- train(atrisk ~ ., data = birth_train, method = "gbm", trControl = custom_gbm_control, tuneGrid = gbm_grid, verbose = F)
+
+#visualize the gbm results
+ggplot(custom_gbm_model)
+
+#examine the optimal model parameters
+custom_gbm_model$bestTune
+```
+
+Whew! That took some time. Of course that's what we'd expect. The time it takes to compute the models increases depending on the size of the data set and the size of the tuning grid. Time is definitely a major factor to consider when training models. The expense of time may not be a proper trade off if the model improvements are small and not as beneficial to you. In our case, you can't put a price on life, and the difference between a few percentage or even tenths of percentage points can make a signficant difference.
+
+As indicated above, we can see the optimal tuning parameters lead to an ROC value of `r round(max(custom_gbm_model$results$ROC), 3)`
+
+Let's follow through with this model to see how the predicitons on the test set turn out.
+```{r}
+#make predictions
+custom_gbm_predictions <- predict(custom_gbm_model, newdata = birth_test)
+
+#make confusion matrix to test predictions vs. actuals
+caret::confusionMatrix(data = custom_gbm_predictions, reference = birth_test$atrisk, positive = "Yes")
+```
+
+It looks like we're actually one True Positive observation worse than the previous model. That's definitely not what we want. 
+
+As I mentioned before, using the predicted class probabiities opened up some options for us. I am going to search the model to find the parameters that lead to the highest sensitivity.
+
+```{r}
+#find the row with the highest sensitivty
+max_sens <- which.max(custom_gbm_model$results$Sens)
+
+#get optimal parameters for max sensitivity
+max_sens_gbm_params <- custom_gbm_model$results[max_sens, ]
+
+#examine the parameters which give the model with the highest sensitivity
+max_sens_gbm_params
+```
+
+And we can visualise this to make sure it matches up with the parameters above.
+
+```{r}
+ggplot(custom_gbm_model, metric = "Sens")
+```
+
+Now, let's plug these parameters into our model and see how it performs on the test set.
+
+```{r}
+#set seed for reproducibility
+set.seed(4711)
+
+#create train control for the model
+max_sens_control <- trainControl(method = "none", verboseIter = F)
+#create a data frame with the optimized values
+max_sens_grid <- data.frame(n.trees = 200, interaction.depth = 2, n.minobsinnode = 10, shrinkage = 0.1)
+
+#build the model
+max_sens_gbm <- train(atrisk ~ ., data = birth_train, method = "gbm", trControl = max_sens_control, tuneGrid = max_sens_grid, verbose = F)
+
+#make predictions on the test set
+max_sens_gbm_predictions <- predict(max_sens_gbm, newdata = birth_test)
+
+#make confusion matrix
+caret::confusionMatrix(max_sens_gbm_predictions, reference = birth_test$atrisk, positive = "Yes")
+```
+
+After all that work, the model sensitivity improved by one True Positive prediction. At this point, if we wanted to make improvements, we'd consider using another model or finding better predictors. To give you an idea of the importance of the predictors, or lack thereof:
+
+```{r}
+library(gbm)
+var_importance <- varImp(max_sens_gbm)
+
+ggplot(var_importance)
+```
+
+Most of the predictors have very little, if no importance to the model!
+
+In this assignment, I chose to use the confusion matrix to compare the performance of the models as I believe that it best captures the importance of the repercussions of sensitivity vs. specificity for this dataset. We can also use AUC and ROC to measure model performance.
+
+```{r}
+library(ModelMetrics) #for caclculating AUC
+
+actuals <- birth_test$atrisk
+
+#calculate aucs for each model
+logit_auc <- auc(predicted =  glm_predictions,  actual = actuals)
+gbm_auc <- auc(predicted = gbm_predictions, actual = actuals)
+tuned_gbm_auc <- auc(predicted = max_sens_gbm_predictions, actual = actuals)
+```
+
+```{r, echo=FALSE}
+sprintf("logistic regression model test AUC: %.3f", logit_auc)
+sprintf("Generalized Boosting Model test AUC: %.3f", gbm_auc)
+sprintf("Custom tuned GBM for Max Sensitivity model test AUC: %.3f", tuned_gbm_auc)
+```
+
+Finally, we can attain similar results with a visual perspective:
+
+```{r}
+library(ROCR) #for visualizing ROC curves
+# List of predictions converted to binary values
+preds_list <- list(ifelse(glm_predictions == "Yes", 1, 0), ifelse(gbm_predictions == "Yes", 1, 0), ifelse(max_sens_gbm_predictions == "Yes", 1, 0))
+
+# List of actual values (same for all)
+m <- length(preds_list)
+
+actuals_list <- rep(list(ifelse(birth_test$atrisk == "Yes", 1, 0)), m)
+
+# Plot the ROC curves
+pred <- prediction(predictions = preds_list, labels = actuals_list)
+rocs <- performance(prediction.obj = pred, measure = "tpr", x.measure = "fpr")
+plot(rocs, col = as.list(1:m), main = "Test Set ROC Curves")
+legend(x = "bottomright", 
+       legend = c("Logit Reg. Model", "GBM Model", "Custom GBM Model"),
+       fill = 1:m)
+```
+
