@@ -6,7 +6,7 @@ output: html_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE, warning = F, message = F)
+knitr::opts_chunk$set(echo = TRUE, warning = F, message = F, error = T )
 library(tidyverse)
 library(caret)
 ```
@@ -58,9 +58,7 @@ any(is.na(ocdata))
 ```
 
 
-## OLSR 
-
-### Problem 2A
+## Problem 2A
 Our first task is to build an ordinary least squares regression model predicting income using only the prestige variable. Before we begin, let's first visualize the relationship between the two variables to make sure there's a linear relationship.
 
 ```{r}
@@ -69,18 +67,16 @@ ggplot(ocdata, aes(x = prestige, y = income)) +
   geom_smooth(method = "lm")
 ```
 
-Aha! Good thing we checked this basic but necessary assumption. It looks like there's something going on at the extreme end of the dataset where income increases much more dramatically at the highest levels of prestige.
+Hmm, this is interesting. While the relationship between the two variables is linear *for the most part*, it appears that there is something happening on the right tail which results in significantly larger income values at the upper end of the prestige.
 
-If we were to build a model on this data as is, we'd expect the residuals to be skewed. The second assumption of OLS states that the mean of the residuals should be 0. This would indicate that the error is random and now bias still exists in the model.
-
-Let's check to see if this is the case. First let's split the data.
+We can check to see whether or not there are any trends in the residuals after we fit the model. But first, let's split the data into a training and test set. Since our data set is rather small, I'm going to use a 70:30 train/test split rather than the traditional 80/20.
 
 ```{r}
 set.seed(6436)
 
 nrows <- nrow(ocdata)
 
-index <- sample.int(n = length(ocdata$income), size = nrows * 0.8, replace = F)
+index <- sample.int(n = length(ocdata$income), size = nrows * 0.7, replace = F)
 
 octrain <- ocdata[index, ]
 octest <- ocdata[-index, ]
@@ -88,15 +84,12 @@ octest <- ocdata[-index, ]
 
 Now let's build the model.
 ```{r}
-set.seed(47)
+set.seed(478)
 library(modelr)
 library(broom)
 
 #create linear model
 ols <- lm(formula = income ~ prestige, data = octrain)
-
-#examine the model results
-glance(ols)
 
 #augment the dataset using the ols model
 ols_augmented <- augment(ols)
@@ -109,163 +102,153 @@ ggplot(data= ols_augmented, aes(x = .fitted, y = .resid)) +
 mean(ols_augmented$.resid)
 ```
 
-Even though the residuals practically have a mean of 0, there's clearly something going on as we see that the resids start to increase drasitcally as the predicted value increases.
+The good news is that the residuals *practically* have a mean of 0. This checks off one of the necessary assumptions required of OLS regression. 
 
+Let's see how the model performed over all. The RMSE tells us how much error is associated with each predicted value, smaller RMSE is always better. The $R^2$ tells us how well the fit of the model is. In other words, how well does the predictor variable, in this case *prestige*, explain the response variable, *income*. A value of 1 is ideal meaning that we have a perfect fit, where as 0 means we'd be just as good at guessing the values than trying to use the model to make predictions.
 
-To fix this, we can transform the data using a log transformation. Let's take a look.
 ```{r}
-ggplot(ocdata, aes(x = prestige, y = log(income))) + 
-  geom_point() +
-  geom_smooth(method = "lm")
+sprintf("RMSE: %g", rmse(ols, octrain))
+sprintf("R-squared: %g", rsquare(ols, octrain))
 ```
 
-Now, let's build a model reflecting this transformation.
+Now, let's take a look at how the model performs on the test set.
 
 ```{r}
-set.seed(146)
+#add predictions to the octest set
+olstest_pred <- add_predictions(data = octest, model = ols, var = "predicted")
 
-#Build a log transformed OLS model
-log_trans_ols <- lm(log(income) ~ prestige, data = octrain)
-
-#exmaine the log transformed model
-glance(log_trans_ols)
+#plot actual vs. predicted
+ggplot()+
+  geom_point(data = olstest_pred, aes(x = predicted, y = income, color = "test data")) +
+  geom_point(data= ols_augmented, aes(x = .fitted, y = income, color = "train data")) +
+  scale_colour_manual(name = "Values", values = c("test data" = "red3", "train data" = "steelblue4"))
 ```
 
-Let's look more closely at the results.
+Both the training data and test data indicate that the model signficantly under estimates the predicted income value at the upper end, i.e. when the prestige reaches the highest levels. Let's examine this trend from another perspective.
 
 ```{r}
-#augment the log transformed model
-log_trans_augmented <- augment(log_trans_ols)
+#plot the data
+ggplot(olstest_pred, aes(x = prestige)) +
+  geom_point(aes(y = income, color = "actual")) +
+  geom_point(aes(y = predicted, color = "predicted")) +
+  scale_color_manual(name = "Values", values = c("actual" = "red3", "predicted" = "steelblue4"))
 
-#plot the residuals
-ggplot(data= log_trans_augmented, aes(x = .fitted, y = .resid)) +
-  geom_point() +
-  geom_abline(slope = 0)
-
-#plot the predicted values vs. the fitted values (transformed back into the original scale)
-ggplot(log_trans_augmented, aes(x = exp(1)^.fitted, y = exp(1)^log.income.))+
-  geom_point() +
-  geom_abline()
-```
-
-Now, let's try make predictions on the test set and compare them to the actuals.
-```{r}
-#make predictions on the test set
-oc_ols_test <- augment(log_trans_ols, newdata = octest)
-
-#plot the data (don't forget to transform the predicted values back to the original scale)
-ggplot(oc_ols_test, aes(x = prestige)) +
-  geom_point(aes(y = income, color = "blue")) +
-  geom_point(aes(y = exp(1)^.fitted, color = "red")) +
-  scale_color_manual(name = "values", values = c("blue" = "blue", "red" = "red"), labels = c("actual", "predicted"))
-  
+#calculate rsquared and rmse for test set
+olstest_rmse <- RMSE(pred = olstest_pred$predicted, obs = olstest_pred$income)
+olstest_r.squared <- R2(pred = olstest_pred$predicted, obs = olstest_pred$income)
 ```
 
 ## Problem 2B
 
-In this next section, we'll explore the rest of the variables in the ocdata set and build a model using **glmnet**.
-
-First, we'll create a train control for 10 fold cross validation.
-```{r}
-#create train control
-oc_control <- trainControl(method = "cv", number = 10, verboseIter = T)
-```
-
-Next let's see if there are any model parameters we can specify for the glmnet function.
+THoe model above uses only one predictor variable to generate an ordinary least squares regression model. What happens if we take a look at some of the other variables the data has to offer. And also why not try a different modeling approach. Let's start by taking a look at a scatterplot matrix of the data to see if we gain any insight.
 
 ```{r}
-modelLookup("glmnet")
+pairs(ocdata)
 ```
 
-The glmnet model allows us to tune alpha and lambda. pure alpha specifies a lasso regression model which penalizes non-zero coefficients. Because we only have a 4 predictor variables to work with, this may not be the best type of regression. On the other hand, we have ridge regression which penalizes the absolute value of the coefficients. We can specify the tune lambda to find the optimal model.
+It appears that education shares a similar relationship to income as prestige does. To better assess this relationship we can take a look at the correlation values to see which is stronger.
 
 ```{r}
-#define tuning parameters
-lambdas <- 10^seq(5, -2, by = -.1)
-alpha <- 0
+#relationship between education and income
+cor(ocdata$education, ocdata$income)
 
-#create grid of custom tuning parameters
-tunegrid <- expand.grid(alpha = alpha, lambda = lambdas)
-
-#create x and y vars for formula
-x <- octrain %>% select(-income) %>% data.matrix()
-
-y <- octrain$income
-
-#build ridge regression mode
-oc_glm <- train(x = x, y = y, method = "glmnet", trControl = oc_control, tuneGrid = tunegrid)
-
-oc_glm$results
-
-plot(oc_glm)
-
-oc_glm$bestTune
+#relationship between prestige and income
+cor(ocdata$prestige, ocdata$income)
 ```
 
-Now that we have found the optimal results, let's build the model with the best lambda.
+Prestige actually has the strong correlation. If we were to use both of these predictors in the dataset, we may run into the issue of overfitting the data due to co-correlation.
+
+One interesting observation is that the income plotted agains prestige and education has a *hockey stick* trend. That is, the income values dramatically increase at the high end of the other variables producing a plot that looks like a hockey stick.
+
+This is a frequent occurrence when dealing with monetary values. We can fix this by using a log transformation on the income response variable. Let's examine the distribution of the income data to get a better understanding of this issue.
+```{r}
+ggplot(ocdata, aes(x = income)) +
+  geom_density()
+```
+
+We can see that there is a long right tail indicating that the income data isn't normally distributed. Most of the data is centered around 0 to 10,000 range, with a few outliers beyond that. Let's see what happens when we log transform the income.
 
 ```{r}
-set.seed(947)
-
-best_glm <- train(x, y, 
-                  method = "glmnet", 
-                  trControl = trainControl(method = "none"), 
-                  tuneGrid = data.frame(alpha = 0, 
-                                        lambda = oc_glm$bestTune$lambda))
-summary(best_glm)
-
-coef(best_glm$finalModel, s = best_glm$bestTune$lambda)
+ggplot(ocdata, aes(x = log(income))) +
+  geom_density()
 ```
 
-Let's apply our model to the test set
-```{r}
+Now the income data is normally distributed. Now let's see how we can apply this transformation to the modeling procedure.
 
-newdata <- octest %>% select(-income) %>% data.matrix()
-
-best_glm_preds <- predict(best_glm, newdata = newdata)
-
-#convert the predictions back to the original scale
-#best_glm_preds <- exp(1)^best_glm_preds
-
-```
-
-Calculate the $R^2$
+Let's build three models, twp of which take the log transformation of the response variable income. The first model will use only prestige as the predictor, the second will include the entire dataset because we still don't know whether these other variables will provide us any additional predictive power. The third data set will not use log transformation on income and will use all available predictors to fit the model. We can think of this third model as our control to see whether taking the log of the response is better or not.
 
 ```{r}
-#calculate total sum of squares
-sst <- sum((octest$income - mean(octest$income))^2)
+#create formulas
+log_reg_formula <- as.formula("log(income) ~ prestige")
+log_multireg_formula <- as.formula("log(income) ~ .")
+multi_reg_formula <- as.formula("income ~ .")
 
-#calculate the sum of the squared error
-sse <- sum((best_glm_preds - octest$income)^2)
+#build models
+log_reg_model <- lm(log_reg_formula, octrain)
+log_multi_reg_model <- lm(log_multireg_formula, octrain)
+multi_reg_model <- lm(multi_reg_formula, octrain)
 
-#calculate R^2
-1 - (sse/sst)
+models <- list("log transformed linear regression model" = log_reg_model, 
+               "log transformed multiple regression model" = log_multi_reg_model, 
+               "multiple regression model" = multi_reg_model)
+
+for(i in 1:3){
+  x <- summary(models[[i]])$r.squared
+  y <- names(models[i])
+  
+  print(sprintf("%s r.squared: %g", y, x))
+}
 ```
 
-visualize the results
+And so it looks like our log transformed model using all predictors has the highest r-squared. This is also a signficant improvement over the simple OLS regression model we fit earlier. Now let's put it to the ultimate test by making predictions on the test set.
+
 ```{r}
-octest <- octest %>%
-  mutate(predicted = best_glm_preds)
+#create model predictions, purrr:map()
+model_predictions <- as.data.frame(map(models, predict, octest))
 
-ggplot(octest, aes(x = predicted, y = income)) +
-  geom_point()
+#revert the log transformed predictions back to original scale
+model_predictions <- model_predictions %>%
+  transmute(`multiple regression model` = multiple.regression.model,
+            `log transformed linear regression model` = exp(log.transformed.linear.regression.model),
+         `log transformed multiple regression model` = exp(log.transformed.multiple.regression.model))
+
+#add predictions to octest data set
+octest_pred <- octest %>%
+  bind_cols(model_predictions)
+
+#gather the predicted columns
+octest_pred <- octest_pred %>%
+  gather(key = model, value = predictions, 7:9)
+
+#plot the results
+ggplot(octest_pred, aes(x = predictions, y  = income, color = model))+
+  geom_point() +
+  geom_abline()+
+  geom_smooth(method = "glm", se = F)
+  #facet_grid(~type)
+
+
 ```
+
+The black line indicates a perfect fit where the predicted and actual values of income are equal. Of course, this is not the case. If we look at the slopes for each model, we see that there skewed upwards toward the income axis meaning that the predicted values are estimated lower than the true outcome. The log transformed multiple regression model is behaves similarly than the other models for the bulk of the data and has the bet predicted values, most closely associated to the true income value for that observation than the other models. It's not by much, but at least it's something.
+
+We can examine the $R^2$ for the models based on the test data.
 
 ```{r}
-varImp(object = best_glm)
+`multiple regression r.squared` <- R2(pred = model_predictions$`multiple regression model`, obs = octest$income)
+`log transformed linear regression r.squared` <- R2(pred = model_predictions$`log transformed linear regression model`,
+                                                    obs = octest$income)
+`log transformed multiple reression r.squared` <- R2(pred = model_predictions$`log transformed multiple regression model`,
+                                                     obs = octest$income)
+
+rsquared_values <- c("OLS test R^2" = olstest_r.squared, "Multiple Regression Test R^2" = `multiple regression r.squared`, "Log Transformed Linear Regression Test R^2" = `log transformed linear regression r.squared`, "Log Transformed Multiple Regression Test R^2" = `log transformed multiple reression r.squared`) 
+
+for(i in 1:length(rsquared_values)){
+  x <- names(rsquared_values)[i]
+  y <- rsquared_values[i]
+  
+  print(sprintf("%s: %g", x, y))
+  }
 ```
 
-
-Quasipoisson model
-```{r}
-quasi_glm <- glm(income ~ ., family = 'quasipoisson', data = octrain)
-
-octest_preds <- add_predictions(data = octest, model = quasi_glm)
-
-octest_preds <- octest_preds %>%
-  mutate(pred = exp(pred))
-
-ggplot(octest_preds, aes(x = pred, y = income))+
-  geom_point()
-```
-
+The log transformed multiple regression model holds up on the test set! 
